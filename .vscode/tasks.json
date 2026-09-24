@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "comms-hub-web: dev",
+            "command": "npm run dev",
+            "isBackground": true,
+            "runOptions": {
+                "instanceLimit": 1,
+                "instancePolicy": "silent"
+            },
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE",
+                    "endsPattern": "Local:"
+                }
+            }
+        }
+    ]
+}
