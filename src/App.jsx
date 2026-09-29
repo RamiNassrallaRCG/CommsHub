@@ -39,6 +39,7 @@ import {
   Link,
   List,
   ListOrdered,
+  Lock,
   LifeBuoy,
   LogOut,
   MoonStar,
@@ -73,6 +74,10 @@ import {
 } from 'lucide-react';
 
 const brands = ['Royal Caribbean', 'Celebrity Cruises', 'Silversea'];
+const draftSections = [
+  'Copilot Edit', 'Subject Line', 'Reason Statement', 'Change Statement', 'Grid', 'Your Day in Port/At Sea',
+  'Refund Comp Language', 'Links', 'Phone Numbers/Chat', 'Signature', 'Cross-Referenced Itinerary',
+];
 const documentTypes = ['Email', 'Itinerary', 'Web content', 'Printed collateral', 'Onboard signage'];
 const errorTypes = ['Typo or grammar', 'Incorrect information', 'Brand compliance', 'Missing approval', 'Formatting'];
 const directory = [
@@ -982,6 +987,7 @@ function App() {
   const fileInput = useRef(null);
   const [liveTick, setLiveTick] = useState(() => Date.now());
   const [priorityMenu, setPriorityMenu] = useState(null);
+  const [lockPrompt, setLockPrompt] = useState(null);
   const syncedDueDates = useRef(new Map());
   const calendarSyncQueue = useRef(Promise.resolve());
 
@@ -1668,7 +1674,7 @@ function App() {
     setDraftSaved(false);
   };
 
-  const submitDraftContent = () => {
+  const submitDraftContent = (sections = []) => {
     if (!draftContent.trim() || !selectedDraft) return;
     const stage = getDraftStage(selectedDraft);
     if (!['Copywriter', 'Review 1', 'Review 2', 'Review 3'].includes(stage)) return;
@@ -1684,10 +1690,11 @@ function App() {
       type: nextStage,
       currentStage: nextStage,
       content: draftContent,
+      sections,
       ...(stage === 'Review 1' ? { reviewTwoContent: '' } : {}),
       ...(stage === 'Review 2' && nextStage === 'Review 3' ? { reviewThreeContent: '' } : {}),
       versions: [...(selectedDraft.versions || []), {
-        stage, content: draftContent,
+        stage, content: draftContent, sections,
         ...(stage === 'Review 2' ? { review: {
           reviewer: selectedDraft.reviewerTwo,
           changeType: 'Content',
@@ -1716,6 +1723,71 @@ function App() {
       total: formatChipDuration(stageSeconds),
       errors: 'None',
     }, ...current]);
+  };
+
+  const requestLock = () => {
+    if (!selectedDraft || !draftContent.trim()) return;
+    setLockPrompt({ draftId: selectedDraft.id, stage: getDraftStage(selectedDraft), selected: [], tried: false });
+  };
+
+  const toggleLockSection = (section) => setLockPrompt((current) => ({
+    ...current,
+    selected: current.selected.includes(section)
+      ? current.selected.filter((item) => item !== section)
+      : draftSections.filter((item) => item === section || current.selected.includes(item)),
+  }));
+
+  const confirmLock = () => {
+    if (!lockPrompt?.selected.length) {
+      setLockPrompt((current) => ({ ...current, tried: true }));
+      return;
+    }
+    submitDraftContent(lockPrompt.selected);
+    setLockPrompt(null);
+  };
+
+  const renderLockPrompt = () => {
+    if (!lockPrompt || selectedDraft?.id !== lockPrompt.draftId) return null;
+    const { stage, selected, tried } = lockPrompt;
+    const ready = selected.length > 0;
+    return (
+      <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLockPrompt(null); }}>
+        <div className="lock-modal" role="dialog" aria-modal="true" aria-labelledby="lock-modal-title">
+          <button type="button" className="modal-close" onClick={() => setLockPrompt(null)} aria-label="Close"><X size={17} /></button>
+          <h2 id="lock-modal-title"><Lock size={19} /> Lock {stage}?</h2>
+          <p>Once submitted, this {stage} version cannot be edited, deleted, or overwritten — by anyone.</p>
+          <div className="lock-modal-heading">
+            <strong><ClipboardList size={15} /> Which sections did you draft or update? <b>*</b></strong>
+            <span>
+              <button type="button" onClick={() => setLockPrompt((current) => ({ ...current, selected: [...draftSections] }))}>Select all</button>
+              <i>|</i>
+              <button type="button" onClick={() => setLockPrompt((current) => ({ ...current, selected: [] }))}>Clear</button>
+            </span>
+          </div>
+          <div className="lock-modal-list" role="group" aria-label="Sections">
+            {draftSections.map((section) => {
+              const checked = selected.includes(section);
+              return (
+                <label key={section} className={`lock-section${checked ? ' checked' : ''}`}>
+                  <input type="checkbox" checked={checked} onChange={() => toggleLockSection(section)} />
+                  <span>{section}</span>
+                  <i aria-hidden="true">{checked && <Check size={12} strokeWidth={3} />}</i>
+                </label>
+              );
+            })}
+          </div>
+          <div className="lock-modal-status">
+            {ready
+              ? <span className="ok">{selected.length} section{selected.length === 1 ? '' : 's'} selected</span>
+              : <span className={tried ? 'error' : ''}>Please check at least one section before you can submit.</span>}
+          </div>
+          <div className="lock-modal-actions">
+            <button type="button" className="button secondary" onClick={() => setLockPrompt(null)}>Cancel</button>
+            <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> Yes, lock it</button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const getLockedPriorContent = (draft, priorStage) => {
@@ -2025,11 +2097,11 @@ function App() {
           </div>
           {(!isFinalReview || splitViewOpen) && <div className="content-footer">
             <span>{draftContent.trim().length} characters{showWordCount ? ` · ${draftContent.trim() ? draftContent.trim().split(/\s+/).length : 0} words` : ''}{draftSaved ? ' · Saved' : ''}</span>
-            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={submitDraftContent}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : 'Submit & lock'}</button>}</div>
+            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={requestLock}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : 'Submit & lock'}</button>}</div>
           </div>}
         </section>
         </div>
-        {currentStage === 'Review 3' && <section className="review-two-approval" aria-label="Review 3 approval"><div className="workspace-section-title"><PenLine size={15} /><div><strong>Review 3 approval</strong><span>Review your working copy, then send it to {selectedManager || 'the manager'} for final approval.</span></div></div><div className="review-two-manager"><label><strong><Shield size={14} /> Assign the manager who will give final approval</strong><CustomSelect value={selectedManager} options={managerOptions} onChange={updateDraftField('manager')} placeholder="Select manager" allowClear={false} align="left" ariaLabel="Final approving manager" /></label></div><div className="review-two-approval-footer"><span>{draftSaved ? 'Working copy saved' : `${draftContent.length} characters`}</span><button type="button" className="button secondary" onClick={saveDraftContent}><Save size={14} /> Save draft</button><button type="button" className="button primary" disabled={!draftContent.trim() || !selectedManager} title={!selectedManager ? 'Assign a manager to approve' : undefined} onClick={submitDraftContent}><Check size={14} /> Approve &amp; lock Review 3</button></div></section>}
+        {currentStage === 'Review 3' && <section className="review-two-approval" aria-label="Review 3 approval"><div className="workspace-section-title"><PenLine size={15} /><div><strong>Review 3 approval</strong><span>Review your working copy, then send it to {selectedManager || 'the manager'} for final approval.</span></div></div><div className="review-two-manager"><label><strong><Shield size={14} /> Assign the manager who will give final approval</strong><CustomSelect value={selectedManager} options={managerOptions} onChange={updateDraftField('manager')} placeholder="Select manager" allowClear={false} align="left" ariaLabel="Final approving manager" /></label></div><div className="review-two-approval-footer"><span>{draftSaved ? 'Working copy saved' : `${draftContent.length} characters`}</span><button type="button" className="button secondary" onClick={saveDraftContent}><Save size={14} /> Save draft</button><button type="button" className="button primary" disabled={!draftContent.trim() || !selectedManager} title={!selectedManager ? 'Assign a manager to approve' : undefined} onClick={requestLock}><Check size={14} /> Approve &amp; lock Review 3</button></div></section>}
         {currentStage === 'Review 2' && <section className="review-two-approval" aria-label="Review 2 approval">
           <div className="workspace-section-title"><PenLine size={15} /><div><strong>What did you change?</strong><span>Categorize the change and approve when you're done. Notes are optional.</span></div></div>
           <div className="review-two-fields">
@@ -2044,7 +2116,7 @@ function App() {
             {reviewTwoReview.extraReview && <div className="review-two-extra-assignee"><span>Review 3 assignee <b>*</b></span><CustomSelect value={selectedDraft.reviewerThree || ''} options={people} onChange={updateAssignment('reviewerThree')} placeholder="Select Review 3" allowClear={false} align="left" ariaLabel="Review 3 assignee" /></div>}
           </div>
           <div className={`review-two-manager ${reviewTwoReview.extraReview ? 'is-disabled' : ''}`}><label><strong><Shield size={14} /> Assign the manager who will give final approval</strong><CustomSelect value={reviewTwoReview.extraReview ? '' : selectedManager} options={managerOptions} onChange={updateDraftField('manager')} placeholder={reviewTwoReview.extraReview ? 'Assigned by Review 3' : 'Select manager'} allowClear={false} align="left" ariaLabel="Final approving manager" disabled={!!reviewTwoReview.extraReview} disabledReason="Review 3 will assign the manager" /></label>{reviewTwoReview.extraReview && <small>Review 3 will assign the manager after their review.</small>}</div>
-          <div className="review-two-approval-footer"><button type="button" className="button primary" disabled={!draftContent.trim() || (reviewTwoReview.extraReview ? !selectedDraft.reviewerThree : !selectedManager)} title={!draftContent.trim() ? 'Write your Review 2 draft to approve' : reviewTwoReview.extraReview ? (!selectedDraft.reviewerThree ? 'Assign a Review 3 reviewer' : undefined) : !selectedManager ? 'Assign a manager to approve' : undefined} onClick={submitDraftContent}><Check size={14} /> Approve &amp; lock Review 2</button></div>
+          <div className="review-two-approval-footer"><button type="button" className="button primary" disabled={!draftContent.trim() || (reviewTwoReview.extraReview ? !selectedDraft.reviewerThree : !selectedManager)} title={!draftContent.trim() ? 'Write your Review 2 draft to approve' : reviewTwoReview.extraReview ? (!selectedDraft.reviewerThree ? 'Assign a Review 3 reviewer' : undefined) : !selectedManager ? 'Assign a manager to approve' : undefined} onClick={requestLock}><Check size={14} /> Approve &amp; lock Review 2</button></div>
         </section>}
         {isFinalReview && (() => {
           const changes = diffWords(lockedReviewContent, draftContent);
@@ -2881,6 +2953,7 @@ function App() {
           </form>
         </main>
       )}
+      {renderLockPrompt()}
       <CalendarReminders currentUser={currentUser} />
       <footer><span>© 2026 Comms Hub</span><span>Designed by Rami Nassralla</span></footer>
     </div>
