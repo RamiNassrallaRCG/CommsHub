@@ -3834,9 +3834,14 @@ body.split-view-locked { overflow: hidden; }
 .draft-modal-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   padding-top: 3px;
 }
+.draft-modal-missing { margin-right: auto; color: #64748b; font-size: 11px; }
+.button.primary.create-draft-button:disabled { border-color: #c9c6f5; background: #c9c6f5; color: #fff; cursor: not-allowed; opacity: 0.85; }
+.button.primary.create-draft-button.is-ready { border-color: #4f46e5; background: #4f46e5; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); cursor: pointer; }
+.button.primary.create-draft-button.is-ready:hover { border-color: #4338ca; background: #4338ca; }
 @media (max-width: 1620px) {
   .online-copy { display: none; }
   .online-presence { padding: 5px 8px; }

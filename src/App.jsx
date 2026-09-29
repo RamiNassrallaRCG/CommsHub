@@ -2578,8 +2578,20 @@ function App() {
               </label>
 
               <div className="draft-modal-actions">
-                <button type="button" className="button secondary" onClick={() => { setNewDraftOpen(false); resetNewDraftForm(); }}>Cancel</button>
-                <button type="submit" className="button primary"><Plus size={15} /> Create draft</button>
+                {(() => {
+                  const missing = [
+                    !newDraftForm.title.trim() && 'Title',
+                    !newDraftForm.brand && 'Brand',
+                    !newDraftForm.documentType && 'Document type',
+                    !newDraftForm.reviewerOne && 'Review 1 assignee',
+                    !newDraftForm.reviewerTwo && 'Review 2 assignee',
+                  ].filter(Boolean);
+                  return <>
+                    {missing.length > 0 && <span className="draft-modal-missing">Still needed: {missing.join(', ')}</span>}
+                    <button type="button" className="button secondary" onClick={() => { setNewDraftOpen(false); resetNewDraftForm(); }}>Cancel</button>
+                    <button type="submit" className={`button primary create-draft-button ${missing.length ? '' : 'is-ready'}`} disabled={missing.length > 0} title={missing.length ? `Fill in: ${missing.join(', ')}` : 'Create this draft'}><Plus size={15} /> Create draft</button>
+                  </>;
+                })()}
               </div>
             </form>
           </div>
