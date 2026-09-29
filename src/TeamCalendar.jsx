@@ -908,7 +908,10 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
     <main className="team-calendar-page">
       <div className="tc-shell">
         <aside className="tc-sidebar">
-          <button type="button" className="tc-primary is-ready tc-new" onClick={() => openCreate()}><Plus size={16} /> New event</button>
+          <button type="button" className="tc-new" onClick={() => openCreate()}>
+            <span className="tc-new-icon"><Plus size={16} strokeWidth={2.5} /></span>
+            <span className="tc-new-text"><strong>New event</strong><small>Meeting, task or deadline</small></span>
+          </button>
           <MiniMonth cursor={cursor} range={range} onPick={(day) => setCursor(day)} />
 
           <section className="tc-side-section">
@@ -924,7 +927,7 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
                 const email = p.email.toLowerCase();
                 const on = !hiddenPeople.has(email);
                 return (
-                  <label key={email} className="tc-check">
+                  <label key={email} className={`tc-check${on ? '' : ' is-off'}`}>
                     <input type="checkbox" checked={on} onChange={() => toggleSet(setHiddenPeople, email)} />
                     <span className="tc-avatar">{initials(p.name)}</span>
                     <span className="tc-check-label">{email === me ? `${p.name} (you)` : p.name}</span>
@@ -937,9 +940,8 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
           <section className="tc-side-section">
             <header><strong>Categories</strong></header>
             {[...CATEGORIES, DRAFT_CATEGORY].map((c) => (
-              <label key={c.name} className="tc-check">
+              <label key={c.name} className={`tc-check${hiddenCategories.has(c.name) ? ' is-off' : ''}`} style={{ '--chk': c.color }}>
                 <input type="checkbox" checked={!hiddenCategories.has(c.name)} onChange={() => toggleSet(setHiddenCategories, c.name)} />
-                <span className="tc-swatch" style={{ background: c.color }} />
                 <span className="tc-check-label">{c.name}</span>
               </label>
             ))}
