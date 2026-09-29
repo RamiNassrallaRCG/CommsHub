@@ -1384,8 +1384,6 @@ function App() {
                   Continue to workspace <ArrowUpRight size={16} />
                 </button>
                 {loginError && <p className="access-message" role="alert">{loginError}</p>}
-                <div className="login-divider"><span>or</span></div>
-                <button type="button" className="button secondary login-button" disabled title="Company sign-in is not configured yet">Sign in with Microsoft (not configured)</button>
               </form>
               )}
 
