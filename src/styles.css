@@ -2761,6 +2761,11 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
   border-color: #aaa6f4;
   background: #f0efff;
 }
+.workflow-steps .done {
+  color: #1f7a4d;
+  border-color: #bfe3cf;
+  background: #effaf3;
+}
 .reference-panel {
   padding: 16px;
   background: #f2f4ff;

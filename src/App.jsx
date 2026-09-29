@@ -1929,11 +1929,12 @@ function App() {
         </section>
 
         <div className="workflow-steps">
-          <span className="active">✎ Copywriter · {selectedDraft.copywriter || 'Unassigned'}</span>
-          <span>→ Review 1 · {selectedDraft.reviewerOne || 'Unassigned'}</span>
-          <span>→ Review 2 · {selectedDraft.reviewerTwo || 'Unassigned'}</span>
-          {draftStages.includes('Review 3') && <span>→ Review 3 · {selectedDraft.reviewerThree || 'Unassigned'}</span>}
-          <span>→ Manager · {selectedManager || 'TBD'}</span>
+          {draftStages.map((stage, index) => {
+            const who = { Copywriter: selectedDraft.copywriter, 'Review 1': selectedDraft.reviewerOne, 'Review 2': selectedDraft.reviewerTwo, 'Review 3': selectedDraft.reviewerThree, Manager: selectedManager }[stage];
+            const status = index < currentStageIndex ? 'done' : index === currentStageIndex ? 'active' : '';
+            const marker = status === 'done' ? '✓' : status === 'active' ? '✎' : '→';
+            return <span key={stage} className={status} aria-current={status === 'active' ? 'step' : undefined}>{marker} {stage} · {who || (stage === 'Manager' ? 'TBD' : 'Unassigned')}</span>;
+          })}
         </div>
 
         {!isFinalReview && referencePanelMarkup}
