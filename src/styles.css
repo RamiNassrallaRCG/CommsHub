@@ -3859,3 +3859,7 @@ body.split-view-locked { overflow: hidden; }
 .microsoft-logo i:nth-child(2) { background: #7fba00; }
 .microsoft-logo i:nth-child(3) { background: #00a4ef; }
 .microsoft-logo i:nth-child(4) { background: #ffb900; }
+
+.content-footer .button.primary:not(:disabled) { border-color: #4f46e5; background: #4f46e5; color: #fff; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); cursor: pointer; transition: background .15s, box-shadow .15s; }
+.content-footer .button.primary:not(:disabled):hover { border-color: #4338ca; background: #4338ca; }
+.content-footer .button.primary:disabled { border-color: #c9c6f5; background: #c9c6f5; color: #fff; opacity: 0.85; box-shadow: none; }

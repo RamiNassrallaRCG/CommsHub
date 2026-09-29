@@ -2024,7 +2024,7 @@ function App() {
             {emailEditorMarkup}
           </div>
           {(!isFinalReview || splitViewOpen) && <div className="content-footer">
-            <span>{draftContent.length} characters{showWordCount ? ` · ${draftContent.trim() ? draftContent.trim().split(/\s+/).length : 0} words` : ''}{draftSaved ? ' · Saved' : ''}</span>
+            <span>{draftContent.trim().length} characters{showWordCount ? ` · ${draftContent.trim() ? draftContent.trim().split(/\s+/).length : 0} words` : ''}{draftSaved ? ' · Saved' : ''}</span>
             <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={submitDraftContent}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : 'Submit & lock'}</button>}</div>
           </div>}
         </section>
