@@ -1,4 +1,4 @@
-import { PublicClientApplication } from '@azure/msal-browser';
+import { InteractionRequiredAuthError, PublicClientApplication } from '@azure/msal-browser';
 
 // Values from the Entra ID app registration (Azure portal → App registrations → Comms Hub → Overview).
 // They can be overridden at build time with VITE_ENTRA_CLIENT_ID / VITE_ENTRA_TENANT_ID.
@@ -48,3 +48,28 @@ export const startMicrosoftSignOut = () => {
   if (!account) return Promise.resolve();
   return msalInstance.logoutRedirect({ account });
 };
+
+// Shared team calendar in Microsoft 365. Set ONE of these at build time:
+// - VITE_TEAM_CALENDAR_GROUP_ID: the Microsoft 365 group (Teams team) whose calendar everyone shares.
+// - VITE_TEAM_CALENDAR_OWNER (+ optional VITE_TEAM_CALENDAR_ID): a mailbox calendar shared with the team with edit rights.
+export const teamCalendarConfig = {
+  groupId: import.meta.env.VITE_TEAM_CALENDAR_GROUP_ID || '',
+  owner: import.meta.env.VITE_TEAM_CALENDAR_OWNER || '',
+  calendarId: import.meta.env.VITE_TEAM_CALENDAR_ID || '',
+};
+
+export const hasMicrosoftAccount = () => Boolean(msalInstance?.getActiveAccount() || msalInstance?.getAllAccounts()[0]);
+
+export async function acquireGraphToken(scopes) {
+  const account = msalInstance?.getActiveAccount() || msalInstance?.getAllAccounts()[0];
+  if (!account) throw new Error('Sign in with Microsoft to use the shared team calendar.');
+  try {
+    const result = await msalInstance.acquireTokenSilent({ scopes, account });
+    return result.accessToken;
+  } catch (error) {
+    if (error instanceof InteractionRequiredAuthError) {
+      await msalInstance.acquireTokenRedirect({ scopes, account });
+    }
+    throw error;
+  }
+}

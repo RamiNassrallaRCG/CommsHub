@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import royalLogoWhite from './assets/royal-logo-white.png';
 import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
+import TeamCalendar, { CalendarReminders } from './TeamCalendar';
 import {
   AlertTriangle,
   Archive,
@@ -101,7 +102,7 @@ const pageCatalog = [
   { name: 'Log', description: 'Log a communication', views: ['User', 'Manager'] },
   { name: 'History', description: 'Review history table', views: ['User', 'Manager'] },
   { name: 'Dashboard', description: 'Team dashboard', views: ['Manager'] },
-  { name: 'Team Calendar', description: 'Team calendar & tasks', views: ['Manager'] },
+  { name: 'Team Calendar', description: 'Shared team calendar & tasks', views: ['User', 'Manager'] },
   { name: 'Templates', description: 'Drafts & review workflow', views: ['Manager'] },
   { name: 'My Stats', description: 'Personal stats', views: ['User', 'Manager'] },
 ];
@@ -2720,7 +2721,7 @@ function App() {
                     })}
                   </div>
                   {!isOwner && personPages.length === 0 && <p className="access-message" role="alert">All pages are switched off, so this person can&apos;t sign in.</p>}
-                  {!isOwner && person.view === 'User' && <p className="admin-pages-note">Manager pages (Dashboard, Team Calendar, Templates) appear here after changing the view type to Manager.</p>}
+                  {!isOwner && person.view === 'User' && <p className="admin-pages-note">Manager pages (Dashboard, Templates) appear here after changing the view type to Manager.</p>}
                 </div>
               </td></tr>}</Fragment>;
             })}</tbody>
@@ -2801,7 +2802,9 @@ function App() {
 
       {!allowedPages.includes(activeNav) || (selectedDraft && !allowedPages.includes('Templates')) ? (
         <main className="admin-page"><div className="admin-empty">You don&apos;t have access to this page. Contact the administrator.</div></main>
-      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
+      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : activeNav === 'Team Calendar' ? (
+        <TeamCalendar currentUser={currentUser} team={accessList.filter((person) => person.status === 'Allowed')} drafts={drafts} Select={CustomSelect} />
+      ) : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
         <main className="admin-page"><div className="admin-empty">{activeNav} is coming soon.</div></main>
       ) : (
         <main>
@@ -2857,6 +2860,7 @@ function App() {
           </form>
         </main>
       )}
+      <CalendarReminders currentUser={currentUser} />
       <footer><span>© 2026 Comms Hub</span><span>Designed by Rami Nassralla</span></footer>
     </div>
   );

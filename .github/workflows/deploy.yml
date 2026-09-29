@@ -28,6 +28,9 @@ jobs:
           GITHUB_PAGES: 'true'
           VITE_ENTRA_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
           VITE_ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID || '1caa43b8-bf09-48b6-9b3c-bd5a56fec019' }}
+          VITE_TEAM_CALENDAR_GROUP_ID: ${{ vars.TEAM_CALENDAR_GROUP_ID }}
+          VITE_TEAM_CALENDAR_OWNER: ${{ vars.TEAM_CALENDAR_OWNER }}
+          VITE_TEAM_CALENDAR_ID: ${{ vars.TEAM_CALENDAR_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
