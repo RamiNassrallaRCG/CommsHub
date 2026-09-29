@@ -5,6 +5,6 @@ import react from '@vitejs/plugin-react';
 // so all asset URLs need the repo name as a base path in production.
 // Locally (`npm run dev`) this has no effect — Vite still serves from '/'.
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/GenieHub/' : '/',
+  base: process.env.GITHUB_PAGES === 'true' ? '/CommsHub/' : '/',
   plugins: [react()],
 });
