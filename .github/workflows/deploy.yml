@@ -26,6 +26,8 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'
+          VITE_ENTRA_CLIENT_ID: ${{ vars.ENTRA_CLIENT_ID }}
+          VITE_ENTRA_TENANT_ID: ${{ vars.ENTRA_TENANT_ID || '1caa43b8-bf09-48b6-9b3c-bd5a56fec019' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

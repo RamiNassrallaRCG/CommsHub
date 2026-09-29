@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import royalLogoWhite from './assets/royal-logo-white.png';
+import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
 import {
   AlertTriangle,
   Archive,
@@ -922,6 +923,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [login, setLogin] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [authBusy, setAuthBusy] = useState(isEntraConfigured);
   const [accessList, setAccessList] = useState(loadAccess);
   const [accessError, setAccessError] = useState('');
   const [accessForm, setAccessForm] = useState({ name: '', email: '', title: '', view: 'User' });
@@ -961,6 +963,26 @@ function App() {
   useEffect(() => {
     localStorage.setItem('comms-hub-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!isEntraConfigured) return;
+    let cancelled = false;
+    initMicrosoftSignIn()
+      .then((account) => {
+        if (cancelled || !account) return;
+        const matchedUser = findAllowedUser(getAccountEmails(account));
+        if (!matchedUser || matchedUser.status === 'Denied') {
+          setLoginError(`Access denied for ${account.username}. Your email is not allowed to use Comms Hub. Contact the administrator.`);
+          return;
+        }
+        openWorkspaceFor(matchedUser);
+      })
+      .catch((error) => {
+        if (!cancelled) setLoginError(`Microsoft sign-in failed: ${error.errorMessage || error.message || 'unknown error'}`);
+      })
+      .finally(() => { if (!cancelled) setAuthBusy(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     try {
@@ -1156,14 +1178,7 @@ function App() {
     setSelectedDraft(null);
   };
 
-  const handleLogin = (event) => {
-    event.preventDefault();
-    const normalizedEmail = login.email.trim().toLowerCase();
-    const matchedUser = accessList.find((person) => person.email.toLowerCase() === normalizedEmail);
-    if (!matchedUser || matchedUser.status === 'Denied') {
-      setLoginError('Access denied. Your email is not allowed to use Comms Hub. Contact the administrator.');
-      return;
-    }
+  const openWorkspaceFor = (matchedUser) => {
     setLoginError('');
     const resolvedUser = { ...matchedUser, role: matchedUser.view };
     const startNav = resolvedUser.view === 'Manager' ? 'Templates' : 'Log';
@@ -1174,6 +1189,30 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  const findAllowedUser = (emails) => accessList.find((person) => emails.includes(person.email.toLowerCase()));
+
+  const handleLogin = (event) => {
+    event.preventDefault();
+    if (isEntraConfigured) return;
+    const matchedUser = findAllowedUser([login.email.trim().toLowerCase()]);
+    if (!matchedUser || matchedUser.status === 'Denied') {
+      setLoginError('Access denied. Your email is not allowed to use Comms Hub. Contact the administrator.');
+      return;
+    }
+    openWorkspaceFor(matchedUser);
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    setLoginError('');
+    setAuthBusy(true);
+    try {
+      await startMicrosoftSignIn();
+    } catch (error) {
+      setAuthBusy(false);
+      setLoginError(`Microsoft sign-in failed: ${error.errorMessage || error.message || 'unknown error'}`);
+    }
+  };
+
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
@@ -1181,6 +1220,7 @@ function App() {
     setLoginError('');
     setActiveNav('Log');
     window.history.replaceState(null, '', window.location.href);
+    if (isEntraConfigured) startMicrosoftSignOut();
   };
 
   const addAccessUser = (event) => {
@@ -1297,9 +1337,18 @@ function App() {
               <div className="login-copy">
                 <p className="intro-label">AUTHORIZED ACCESS ONLY</p>
                 <h2>Welcome back</h2>
-                <p>Use your work email to continue to communication quality reviews.</p>
+                <p>{isEntraConfigured ? 'Sign in with your company Microsoft account to continue to communication quality reviews.' : 'Use your work email to continue to communication quality reviews.'}</p>
               </div>
 
+              {isEntraConfigured ? (
+                <div className="login-form">
+                  <button type="button" className="button primary login-button microsoft-login-button" onClick={handleMicrosoftSignIn} disabled={authBusy}>
+                    <span className="microsoft-logo" aria-hidden="true"><i /><i /><i /><i /></span>
+                    {authBusy ? 'Signing in…' : 'Sign in with Microsoft'}
+                  </button>
+                  {loginError && <p className="access-message" role="alert">{loginError}</p>}
+                </div>
+              ) : (
               <form className="login-form" onSubmit={handleLogin}>
                 <label className="login-field">
                   <span>Work email</span>
@@ -1336,11 +1385,14 @@ function App() {
                 </button>
                 {loginError && <p className="access-message" role="alert">{loginError}</p>}
                 <div className="login-divider"><span>or</span></div>
-                <button type="button" className="button secondary login-button">Use SSO (coming soon)</button>
+                <button type="button" className="button secondary login-button" disabled title="Company sign-in is not configured yet">Sign in with Microsoft (not configured)</button>
               </form>
+              )}
 
               <p className="login-security-note">
-                Demo sign-in only. Company authentication is not yet connected.
+                {isEntraConfigured
+                  ? 'Use your company Microsoft account. Only emails approved by the administrator can open the workspace.'
+                  : 'Demo sign-in only. Company authentication is not yet connected.'}
               </p>
             </section>
           </div>
