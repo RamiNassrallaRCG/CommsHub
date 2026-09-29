@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import royalLogoWhite from './assets/royal-logo-white.png';
 import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
 import {
@@ -95,8 +95,24 @@ const directory = [
 const ADMIN_EMAIL = 'raminassralla@celebrity.com';
 const ACCESS_STORAGE_KEY = 'comms-hub-access-v1';
 const accessTypes = ['User', 'Manager'];
+// Every page in the app and which view types include it by default.
+// Admins can switch individual pages off per user (stored as `blockedPages`).
+const pageCatalog = [
+  { name: 'Log', description: 'Log a communication', views: ['User', 'Manager'] },
+  { name: 'History', description: 'Review history table', views: ['User', 'Manager'] },
+  { name: 'Dashboard', description: 'Team dashboard', views: ['Manager'] },
+  { name: 'Team Calendar', description: 'Team calendar & tasks', views: ['Manager'] },
+  { name: 'Templates', description: 'Drafts & review workflow', views: ['Manager'] },
+  { name: 'My Stats', description: 'Personal stats', views: ['User', 'Manager'] },
+];
+const getAllowedPages = (person) => {
+  if (!person) return [];
+  if (person.email?.toLowerCase() === ADMIN_EMAIL) return [...pageCatalog.map((page) => page.name), 'Admin'];
+  const blocked = person.blockedPages || [];
+  return pageCatalog.filter((page) => page.views.includes(person.view) && !blocked.includes(page.name)).map((page) => page.name);
+};
 const initialAccess = directory.map(({ name, email, title, role }) => ({
-  name, email, title, view: role === 'Manager' ? 'Manager' : 'User', status: 'Allowed',
+  name, email, title, view: role === 'Manager' ? 'Manager' : 'User', status: 'Allowed', blockedPages: [],
 }));
 
 const loadAccess = () => {
@@ -116,6 +132,8 @@ const loadAccess = () => {
         name: entry.email.toLowerCase() === 'skremer@rccl.com' && entry.name === 'Srakren Kremer'
           ? 'Sarah Kremer' : entry.name,
         title: typeof entry.title === 'string' ? entry.title : directory.find((person) => person.email === entry.email)?.title || 'Team member',
+        blockedPages: Array.isArray(entry.blockedPages)
+          ? entry.blockedPages.filter((page) => pageCatalog.some((item) => item.name === page)) : [],
       })),
       initialAccess.find((entry) => entry.email === ADMIN_EMAIL),
     ];
@@ -910,6 +928,8 @@ function SectionHeader({ number, icon: Icon, title, description }) {
   );
 }
 
+const navIcons = { Log: PenLine, History: ClipboardList, Dashboard: BarChart3, 'Team Calendar': CalendarDays, Templates: FileText, 'My Stats': UserRound, Admin: Shield };
+
 function App() {
   const [form, setForm] = useState(initialForm);
   const [files, setFiles] = useState([]);
@@ -928,6 +948,7 @@ function App() {
   const [accessError, setAccessError] = useState('');
   const [accessForm, setAccessForm] = useState({ name: '', email: '', title: '', view: 'User' });
   const [accessSearch, setAccessSearch] = useState('');
+  const [expandedAccessEmail, setExpandedAccessEmail] = useState(null);
   const people = accessList.filter((person) => person.status === 'Allowed')
     .map((person) => person.name).sort((a, b) => a.localeCompare(b));
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -1005,19 +1026,22 @@ function App() {
   useEffect(() => {
     if (!currentUser || currentUser.email === ADMIN_EMAIL) return;
     const entry = accessList.find((person) => person.email === currentUser.email);
-    if (!entry || entry.status === 'Denied') {
+    if (!entry || entry.status === 'Denied' || getAllowedPages(entry).length === 0) {
       setIsAuthenticated(false);
       setCurrentUser(null);
       setSelectedDraft(null);
       setActiveNav('Log');
       setLoginError('Your access has been denied. Contact the administrator.');
       window.history.replaceState(null, '', window.location.href);
-    } else if (entry.view !== currentUser.view || entry.title !== currentUser.title || entry.name !== currentUser.name) {
+    } else if (entry.view !== currentUser.view || entry.title !== currentUser.title || entry.name !== currentUser.name
+      || (entry.blockedPages || []).join('|') !== (currentUser.blockedPages || []).join('|')) {
       setCurrentUser({ ...entry, role: entry.view });
-      if (entry.view !== 'Manager' && (activeNav === 'Templates' || selectedDraft)) {
+      const allowed = getAllowedPages(entry);
+      if (!allowed.includes(activeNav) || (selectedDraft && !allowed.includes('Templates'))) {
+        const fallback = allowed[0] || 'Log';
         setSelectedDraft(null);
-        setActiveNav('Log');
-        window.history.replaceState(historyState({ view: 'nav', nav: 'Log' }), '', window.location.href);
+        setActiveNav(fallback);
+        window.history.replaceState(historyState({ view: 'nav', nav: fallback }), '', window.location.href);
       }
     }
   }, [accessList, currentUser, activeNav, selectedDraft]);
@@ -1064,13 +1088,14 @@ function App() {
     const onPopState = (event) => {
       if (!isAuthenticated || event.state?.source !== 'comms-hub') return;
 
-      if (event.state.nav === 'Admin' && currentUser?.email !== ADMIN_EMAIL) {
+      const allowedPages = getAllowedPages(currentUser);
+      if (event.state.nav && !allowedPages.includes(event.state.nav)) {
         setSelectedDraft(null);
-        setActiveNav('Log');
+        setActiveNav(allowedPages[0] || 'Log');
         return;
       }
 
-      if (event.state.view === 'draft' && currentUser?.view === 'Manager') {
+      if (event.state.view === 'draft' && allowedPages.includes('Templates')) {
         const draft = drafts.find((item) => item.id === event.state.draftId);
         if (draft) {
           setActiveNav(event.state.nav || 'Templates');
@@ -1080,13 +1105,12 @@ function App() {
       }
 
       setSelectedDraft(null);
-      const nav = event.state.nav;
-      setActiveNav(nav === 'Templates' && currentUser?.view !== 'Manager' ? 'Log' : nav || (currentUser?.view === 'Manager' ? 'Templates' : 'Log'));
+      setActiveNav(event.state.nav || allowedPages[0] || 'Log');
     };
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [currentUser?.email, currentUser?.view, drafts, isAuthenticated]);
+  }, [currentUser, drafts, isAuthenticated]);
 
   useEffect(() => {
     if (!selectedDraft) {
@@ -1152,8 +1176,7 @@ function App() {
   };
 
   const navigateTo = (nav, { replace = false } = {}) => {
-    if (nav === 'Admin' && currentUser?.email !== ADMIN_EMAIL) return;
-    if (nav === 'Templates' && currentUser?.view !== 'Manager') return;
+    if (!getAllowedPages(currentUser).includes(nav)) return;
     setSelectedDraft(null);
     setActiveNav(nav);
     const method = replace ? 'replaceState' : 'pushState';
@@ -1179,9 +1202,14 @@ function App() {
   };
 
   const openWorkspaceFor = (matchedUser) => {
-    setLoginError('');
     const resolvedUser = { ...matchedUser, role: matchedUser.view };
-    const startNav = resolvedUser.view === 'Manager' ? 'Templates' : 'Log';
+    const allowedPages = getAllowedPages(resolvedUser);
+    if (allowedPages.length === 0) {
+      setLoginError('Your account has no pages enabled. Contact the administrator.');
+      return;
+    }
+    setLoginError('');
+    const startNav = allowedPages.includes('Templates') && resolvedUser.view === 'Manager' ? 'Templates' : allowedPages[0];
     setCurrentUser(resolvedUser);
     setSelectedDraft(null);
     setActiveNav(startNav);
@@ -1237,7 +1265,7 @@ function App() {
       setAccessError('That email is already in the access list.');
       return;
     }
-    setAccessList((current) => [...current, { name, email, title, view: accessForm.view, status: 'Allowed' }]);
+    setAccessList((current) => [...current, { name, email, title, view: accessForm.view, status: 'Allowed', blockedPages: [] }]);
     setAccessForm({ name: '', email: '', title: '', view: 'User' });
     setAccessError('');
   };
@@ -1245,6 +1273,15 @@ function App() {
   const updateAccessUser = (email, changes) => {
     if (currentUser?.email !== ADMIN_EMAIL || email === ADMIN_EMAIL) return;
     setAccessList((current) => current.map((entry) => entry.email === email ? { ...entry, ...changes } : entry));
+  };
+
+  const togglePageAccess = (email, page) => {
+    if (currentUser?.email !== ADMIN_EMAIL || email === ADMIN_EMAIL) return;
+    setAccessList((current) => current.map((entry) => {
+      if (entry.email !== email) return entry;
+      const blocked = entry.blockedPages || [];
+      return { ...entry, blockedPages: blocked.includes(page) ? blocked.filter((item) => item !== page) : [...blocked, page] };
+    }));
   };
 
   const update = (key) => (event) => {
@@ -2638,18 +2675,42 @@ function App() {
           {accessError && <p className="access-message" role="alert">{accessError}</p>}
         </section>
         <section className="admin-card">
-          <div className="admin-list-header"><div><h2>People &amp; access</h2><p>Denied users cannot sign in. Your admin account cannot be changed.</p></div><label className="admin-search"><Search size={15} /><input aria-label="Search users" value={accessSearch} onChange={(event) => setAccessSearch(event.target.value)} placeholder="Search name, email, or title" /></label></div>
+          <div className="admin-list-header"><div><h2>People &amp; access</h2><p>Click a name to choose which pages that person can open. Denied users cannot sign in. Your admin account cannot be changed.</p></div><label className="admin-search"><Search size={15} /><input aria-label="Search users" value={accessSearch} onChange={(event) => setAccessSearch(event.target.value)} placeholder="Search name, email, or title" /></label></div>
           <div className="admin-table-wrap"><table className="admin-table">
-            <thead><tr><th>Name</th><th>Email ID</th><th>Title</th><th>View type</th><th>Access</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email ID</th><th>Title</th><th>View type</th><th>Pages</th><th>Access</th></tr></thead>
             <tbody>{matchingUsers.map((person) => {
               const isOwner = person.email.toLowerCase() === ADMIN_EMAIL;
-              return <tr key={person.email}>
-                <td><strong>{person.name}</strong></td>
+              const isExpanded = expandedAccessEmail === person.email;
+              const personPages = getAllowedPages(person);
+              const rolePages = isOwner ? pageCatalog : pageCatalog.filter((page) => page.views.includes(person.view));
+              const blocked = person.blockedPages || [];
+              return <Fragment key={person.email}><tr className={isExpanded ? 'admin-row-expanded' : undefined}>
+                <td><button type="button" className="admin-name-toggle" aria-expanded={isExpanded} aria-controls={`pages-${person.email}`} onClick={() => setExpandedAccessEmail(isExpanded ? null : person.email)}>{isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}<strong>{person.name}</strong></button></td>
                 <td>{person.email}</td>
                 <td>{isOwner ? person.title : <input className="admin-title-input" aria-label={`Title for ${person.email}`} value={person.title} onChange={(event) => updateAccessUser(person.email, { title: event.target.value })} placeholder="Job title" />}</td>
                 <td>{isOwner ? <span className="admin-owner-badge">Administrator</span> : <select aria-label={`View type for ${person.email}`} value={person.view} onChange={(event) => updateAccessUser(person.email, { view: event.target.value })}><option value="User">User</option><option value="Manager">Manager</option></select>}</td>
+                <td><span className="admin-page-count">{isOwner ? 'All pages' : `${personPages.length} of ${rolePages.length}`}</span></td>
                 <td>{isOwner ? <span className="admin-status allowed">Allowed</span> : <button type="button" className={`admin-status ${person.status.toLowerCase()}`} onClick={() => updateAccessUser(person.email, { status: person.status === 'Allowed' ? 'Denied' : 'Allowed' })} aria-label={`${person.status === 'Allowed' ? 'Deny' : 'Allow'} ${person.email}`}>{person.status === 'Allowed' ? 'Allowed · Deny' : 'Denied · Allow'}</button>}</td>
-              </tr>;
+              </tr>
+              {isExpanded && <tr className="admin-pages-row" id={`pages-${person.email}`}><td colSpan={6}>
+                <div className="admin-pages-panel">
+                  <div className="admin-pages-heading"><strong>Page access for {person.name}</strong><span>{isOwner ? 'The administrator always has access to every page.' : `Pages available to the ${person.view} view. Switch a page off to hide it and block access.`}</span></div>
+                  <div className="admin-pages-grid">
+                    {rolePages.map((page) => {
+                      const enabled = isOwner || !blocked.includes(page.name);
+                      const Icon = navIcons[page.name];
+                      return <label key={page.name} className={`admin-page-toggle ${enabled ? 'is-on' : 'is-off'} ${isOwner ? 'is-locked' : ''}`}>
+                        <span className="admin-page-icon"><Icon size={15} /></span>
+                        <span className="admin-page-copy"><strong>{page.name}</strong><small>{page.description}</small></span>
+                        <input type="checkbox" role="switch" checked={enabled} disabled={isOwner} onChange={() => togglePageAccess(person.email, page.name)} aria-label={`${page.name} access for ${person.email}`} />
+                        <span className="admin-switch" aria-hidden="true" />
+                      </label>;
+                    })}
+                  </div>
+                  {!isOwner && personPages.length === 0 && <p className="access-message" role="alert">All pages are switched off, so this person can&apos;t sign in.</p>}
+                  {!isOwner && person.view === 'User' && <p className="admin-pages-note">Manager pages (Dashboard, Team Calendar, Templates) appear here after changing the view type to Manager.</p>}
+                </div>
+              </td></tr>}</Fragment>;
             })}</tbody>
           </table>{matchingUsers.length === 0 && <p className="admin-empty">No users match your search.</p>}</div>
         </section>
@@ -2657,21 +2718,8 @@ function App() {
     );
   };
 
-  const navigationItems = currentUser?.view === 'Manager'
-    ? [
-      ['Log', PenLine],
-      ['History', ClipboardList],
-      ['Dashboard', BarChart3],
-      ['Team Calendar', CalendarDays],
-      ['Templates', FileText],
-      ['My Stats', UserRound],
-    ]
-    : [
-      ['Log', PenLine],
-      ['History', ClipboardList],
-      ['My Stats', UserRound],
-    ];
-  if (currentUser?.email === ADMIN_EMAIL) navigationItems.push(['Admin', Shield]);
+  const allowedPages = getAllowedPages(currentUser);
+  const navigationItems = allowedPages.map((name) => [name, navIcons[name]]);
 
   const onlineUsers = currentUser
     ? [
@@ -2739,7 +2787,11 @@ function App() {
         </div>
       </header>
 
-      {activeNav === 'Admin' && currentUser?.email === ADMIN_EMAIL && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' && currentUser?.view === 'Manager' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : (
+      {!allowedPages.includes(activeNav) || (selectedDraft && !allowedPages.includes('Templates')) ? (
+        <main className="admin-page"><div className="admin-empty">You don&apos;t have access to this page. Contact the administrator.</div></main>
+      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
+        <main className="admin-page"><div className="admin-empty">{activeNav} is coming soon.</div></main>
+      ) : (
         <main>
           <div className="page-intro">
             <span className="intro-label">NEW ENTRY</span>
