@@ -401,6 +401,11 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
 
   const openPeek = (occ, e) => {
     e.stopPropagation();
+    if (occ.draftId && onOpenDraft && drafts?.some((d) => d.id === occ.draftId)) {
+      setPeek(null);
+      onOpenDraft(occ.draftId);
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const width = 340;
     const left = rect.right + 8 + width < window.innerWidth ? rect.right + 8 : Math.max(8, rect.left - width - 8);
@@ -476,7 +481,7 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
         onDragStart={(e) => onDragStart(occ, e)}
         onClick={(e) => openPeek(occ, e)}
         aria-label={eventLabel(occ)}
-        title={eventLabel(occ)}
+        title={occ.draftId ? `${eventLabel(occ)} · Click to open the draft` : eventLabel(occ)}
       >
         {!allDay && <span className="tc-chip-dot" />}
         {!allDay && <span className="tc-chip-time">{fmtTime(new Date(occ.start)).replace(':00', '')}</span>}
