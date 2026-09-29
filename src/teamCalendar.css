@@ -47,10 +47,15 @@
 .tc-mini-day.selected { background: var(--prim); color: #fff; }
 
 .tc-side-section { border-top: 1px solid var(--panel-border); padding-top: 12px; display: flex; flex-direction: column; gap: 2px; }
-.tc-side-section header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.tc-side-section header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
 .tc-side-section header strong { font-size: 12.5px; color: var(--text); }
-.tc-side-links { display: flex; gap: 4px; }
-.tc-side-links button { border: 1px solid var(--panel-border); background: transparent; color: var(--text-muted); border-radius: 999px; font-size: 11px; padding: 3px 9px; font-weight: 600; }
+.tc-side-title { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.tc-collapse { width: 22px; height: 22px; flex: 0 0 22px; display: grid; place-items: center; padding: 0; border: 1px solid var(--panel-border); border-radius: 7px; background: var(--surface); color: var(--prim, #1f3864); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.tc-collapse:hover { background: var(--prim, #1f3864); border-color: var(--prim, #1f3864); color: #fff; }
+.tc-collapse:focus-visible { outline: 2px solid var(--prim, #1f3864); outline-offset: 2px; }
+.tc-side-count { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: var(--panel-border); color: var(--text-muted); font-size: 11px; font-weight: 700; }
+.tc-side-links { display: flex; gap: 4px; flex-shrink: 0; }
+.tc-side-links button { border: 1px solid var(--panel-border); background: transparent; color: var(--text-muted); border-radius: 999px; font-size: 11px; padding: 3px 9px; font-weight: 600; white-space: nowrap; }
 .tc-side-links button.active { background: var(--soft-pill); color: var(--soft-pill-text); border-color: transparent; }
 .tc-people { max-height: 260px; overflow: auto; margin-right: -6px; padding-right: 6px; }
 .tc-check { --chk: var(--prim); display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 4px 8px; border-radius: 9px; cursor: pointer; font-size: 13px; color: var(--text); transition: background .12s, opacity .12s; }

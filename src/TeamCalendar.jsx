@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Cloud, Download, HardDrive, MapPin,
-  Pencil, Plus, RefreshCw, Repeat, Search, Trash2, UsersRound, X,
+  Minus, Pencil, Plus, RefreshCw, Repeat, Search, Trash2, UsersRound, X,
 } from 'lucide-react';
 import {
   CATEGORIES, DRAFT_CATEGORY, addDays, addMinutes, categoryColor, fromDateKey, getCalendarProvider, pad, startOfDay,
@@ -203,6 +203,9 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
   const [refreshTick, setRefreshTick] = useState(0);
   const [hiddenPeople, setHiddenPeople] = useState(() => new Set());
   const [hiddenCategories, setHiddenCategories] = useState(() => new Set());
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('comms-hub-cal-collapsed')) || {}; } catch { return {}; }
+  });
   const [search, setSearch] = useState('');
   const [peek, setPeek] = useState(null);
   const [editor, setEditor] = useState(null);
@@ -913,6 +916,20 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
     );
   };
 
+  const toggleSection = (key) => setCollapsed((current) => {
+    const next = { ...current, [key]: !current[key] };
+    localStorage.setItem('comms-hub-cal-collapsed', JSON.stringify(next));
+    return next;
+  });
+  const sectionToggle = (key, label) => (
+    <button type="button" className="tc-collapse" onClick={() => toggleSection(key)} aria-expanded={!collapsed[key]} aria-label={`${collapsed[key] ? 'Expand' : 'Collapse'} ${label}`} title={collapsed[key] ? 'Expand' : 'Collapse'}>
+      {collapsed[key] ? <Plus size={13} strokeWidth={2.6} /> : <Minus size={13} strokeWidth={2.6} />}
+    </button>
+  );
+  const shownPeople = people.filter((p) => !hiddenPeople.has(p.email.toLowerCase())).length;
+  const allCategories = [...CATEGORIES, DRAFT_CATEGORY];
+  const shownCategories = allCategories.filter((c) => !hiddenCategories.has(c.name)).length;
+
   const allPeopleShown = hiddenPeople.size === 0;
   const onlyMe = people.length > 1 && people.every((p) => (p.email.toLowerCase() === me) !== hiddenPeople.has(p.email.toLowerCase()));
 
@@ -928,13 +945,17 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
 
           <section className="tc-side-section">
             <header>
-              <strong>Team calendars</strong>
+              <div className="tc-side-title">
+                {sectionToggle('people', 'team calendars')}
+                <strong>Team calendars</strong>
+                {collapsed.people && <span className="tc-side-count">{shownPeople}/{people.length}</span>}
+              </div>
               <div className="tc-side-links">
                 <button type="button" className={allPeopleShown ? 'active' : ''} onClick={() => setHiddenPeople(new Set())}>All</button>
                 <button type="button" className={onlyMe ? 'active' : ''} onClick={() => setHiddenPeople(new Set(people.map((p) => p.email.toLowerCase()).filter((e) => e !== me)))}>Only me</button>
               </div>
             </header>
-            <div className="tc-people">
+            {!collapsed.people && <div className="tc-people">
               {people.map((p) => {
                 const email = p.email.toLowerCase();
                 const on = !hiddenPeople.has(email);
@@ -946,12 +967,18 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
                   </label>
                 );
               })}
-            </div>
+            </div>}
           </section>
 
           <section className="tc-side-section">
-            <header><strong>Categories</strong></header>
-            {[...CATEGORIES, DRAFT_CATEGORY].map((c) => (
+            <header>
+              <div className="tc-side-title">
+                {sectionToggle('categories', 'categories')}
+                <strong>Categories</strong>
+                {collapsed.categories && <span className="tc-side-count">{shownCategories}/{allCategories.length}</span>}
+              </div>
+            </header>
+            {!collapsed.categories && allCategories.map((c) => (
               <label key={c.name} className={`tc-check${hiddenCategories.has(c.name) ? ' is-off' : ''}`} style={{ '--chk': c.color }}>
                 <input type="checkbox" checked={!hiddenCategories.has(c.name)} onChange={() => toggleSet(setHiddenCategories, c.name)} />
                 <span className="tc-check-label">{c.name}</span>
