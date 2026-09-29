@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import royalLogoWhite from './assets/royal-logo-white.png';
 import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
 import TeamCalendar, { CalendarReminders } from './TeamCalendar';
+import { buildDraftDueEvent, removeDraftDueDate, syncDraftDueDate } from './calendarStore';
 import {
   AlertTriangle,
   Archive,
@@ -981,6 +982,24 @@ function App() {
   const fileInput = useRef(null);
   const [liveTick, setLiveTick] = useState(() => Date.now());
   const [priorityMenu, setPriorityMenu] = useState(null);
+  const syncedDueDates = useRef(new Map());
+  const calendarSyncQueue = useRef(Promise.resolve());
+
+  const queueCalendarSync = (task) => {
+    calendarSyncQueue.current = calendarSyncQueue.current
+      .then(task)
+      .catch((error) => console.warn('Team calendar sync failed:', error));
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    drafts.forEach((draft) => {
+      const signature = JSON.stringify(buildDraftDueEvent(draft, accessList));
+      if (syncedDueDates.current.get(draft.id) === signature) return;
+      syncedDueDates.current.set(draft.id, signature);
+      queueCalendarSync(() => syncDraftDueDate(draft, accessList));
+    });
+  }, [drafts, accessList, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('comms-hub-theme', darkMode ? 'dark' : 'light');
@@ -1579,6 +1598,8 @@ function App() {
 
   const deleteDraft = (draft) => {
     setDrafts((current) => current.filter((item) => item.id !== draft.id));
+    syncedDueDates.current.delete(draft.id);
+    queueCalendarSync(() => removeDraftDueDate(draft.id));
     setHistoryRows((current) => [{
       date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
       title: draft.title,
@@ -2803,7 +2824,7 @@ function App() {
       {!allowedPages.includes(activeNav) || (selectedDraft && !allowedPages.includes('Templates')) ? (
         <main className="admin-page"><div className="admin-empty">You don&apos;t have access to this page. Contact the administrator.</div></main>
       ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : activeNav === 'Team Calendar' ? (
-        <TeamCalendar currentUser={currentUser} team={accessList.filter((person) => person.status === 'Allowed')} drafts={drafts} Select={CustomSelect} />
+        <TeamCalendar currentUser={currentUser} team={accessList.filter((person) => person.status === 'Allowed')} drafts={drafts} Select={CustomSelect} onOpenDraft={(draftId) => { const draft = drafts.find((item) => item.id === draftId); if (draft) navigateToDraft(draft); }} />
       ) : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
         <main className="admin-page"><div className="admin-empty">{activeNav} is coming soon.</div></main>
       ) : (

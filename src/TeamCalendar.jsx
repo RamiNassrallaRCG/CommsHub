@@ -191,7 +191,7 @@ function MiniMonth({ cursor, range, onPick }) {
   );
 }
 
-export default function TeamCalendar({ currentUser, team, drafts, Select }) {
+export default function TeamCalendar({ currentUser, team, drafts, Select, onOpenDraft }) {
   const provider = useMemo(() => getCalendarProvider(), []);
   const [view, setView] = useState(() => {
     const saved = localStorage.getItem(VIEW_KEY);
@@ -290,9 +290,9 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
       const start = fromDateKey(d.dueDate);
       const owner = people.find((p) => p.name === d.copywriter || p.name.split(' ')[0] === d.copywriter)?.email || '';
       return {
-        id: `draft-${d.id}`, occurrenceId: `draft-${d.id}`, title: `Due: ${d.title}`, start: start.toISOString(), end: addDays(start, 1).toISOString(),
+        id: `draft-${d.id}`, occurrenceId: `draft-${d.id}`, draftId: d.id, title: `Due: ${d.title}`, start: start.toISOString(), end: addDays(start, 1).toISOString(),
         allDay: true, category: DRAFT_CATEGORY.name, owner, attendees: [], reminder: -1, readOnly: true,
-        description: [d.brand, d.documentType, d.type && `Current step: ${d.type}`, d.priority && `Priority: ${d.priority}`].filter(Boolean).join(' · '),
+        description: [d.brand, d.documentType, (d.currentStage || d.type) && `Current step: ${d.currentStage || d.type}`, d.priority && `Priority: ${d.priority}`].filter(Boolean).join(' · '),
       };
     })
     .filter((e) => new Date(e.start) < range.end && new Date(e.end) > range.start),
@@ -301,7 +301,12 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return [...occurrences, ...draftEvents].filter((o) => {
+    const syncedDrafts = new Set(occurrences.map((o) => o.draftId).filter(Boolean));
+    const merged = [
+      ...occurrences.map((o) => (o.draftId ? { ...o, readOnly: true } : o)),
+      ...draftEvents.filter((o) => !syncedDrafts.has(o.draftId)),
+    ];
+    return merged.filter((o) => {
       if (hiddenCategories.has(o.category)) return false;
       const involved = [o.owner, ...(o.attendees || [])].filter(Boolean).map((p) => p.toLowerCase());
       if (involved.length && hiddenPeople.size && involved.every((p) => hiddenPeople.has(p))) return false;
@@ -688,7 +693,14 @@ export default function TeamCalendar({ currentUser, team, drafts, Select }) {
             </div>
           )}
           {occ.description && <p className="tc-peek-notes">{occ.description}</p>}
-          {occ.readOnly && <p className="tc-peek-hint">Comes from the draft&apos;s due date in Templates.</p>}
+          {occ.draftId && (
+            <div className="tc-peek-draft">
+              <p className="tc-peek-hint">Synced from the draft&apos;s due date. Change the date on the draft and the calendar updates for everyone.</p>
+              {onOpenDraft && drafts?.some((d) => d.id === occ.draftId) && (
+                <button type="button" onClick={() => { setPeek(null); onOpenDraft(occ.draftId); }}>Open draft</button>
+              )}
+            </div>
+          )}
           {occ.updatedBy && <p className="tc-peek-hint">Last updated by {personName(occ.updatedBy)}</p>}
         </div>
       </>

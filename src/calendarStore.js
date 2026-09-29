@@ -217,6 +217,9 @@ function createLocalProvider() {
     async removeSeries(seriesId) {
       write(all().filter((e) => e.id !== seriesId));
     },
+    async findByDraftId(draftId) {
+      return all().filter((e) => e.draftId === draftId);
+    },
     subscribe(callback) {
       const onStorage = (e) => { if (e.key === STORAGE_KEY) callback(); };
       const onMessage = () => callback();
@@ -232,6 +235,8 @@ function createLocalProvider() {
 
 // Stores Comms Hub-only fields (owner, category, task status) on the Outlook event itself.
 const META_PROP = 'String {6c1f3f9e-2b7a-4d3c-9a51-7e0c2f4b8d11} Name CommsHubMeta';
+// Separate property so draft due-date events can be looked up with a Graph $filter.
+const DRAFT_PROP = 'String {6c1f3f9e-2b7a-4d3c-9a51-7e0c2f4b8d11} Name CommsHubDraftId';
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
@@ -280,7 +285,7 @@ function toGraph(ev, includeRecurrence) {
     isReminderOn: ev.reminder >= 0,
     reminderMinutesBeforeStart: ev.reminder >= 0 ? ev.reminder : 0,
     attendees: (ev.attendees || []).map((address) => ({ emailAddress: { address }, type: 'required' })),
-    singleValueExtendedProperties: [{ id: META_PROP, value: JSON.stringify(meta) }],
+    singleValueExtendedProperties: [{ id: META_PROP, value: JSON.stringify(meta) }, ...(ev.draftId ? [{ id: DRAFT_PROP, value: ev.draftId }] : [])],
   };
   if (includeRecurrence) body.recurrence = toGraphRecurrence(ev.recurrence, ev.start);
   return body;
@@ -295,7 +300,9 @@ function fromGraph(g) {
   }
   const start = parseGraphDate(g.start, g.isAllDay);
   const end = parseGraphDate(g.end, g.isAllDay);
+  const draftId = g.singleValueExtendedProperties?.find((p) => p.id.toLowerCase() === DRAFT_PROP.toLowerCase())?.value || '';
   return {
+    draftId,
     id: g.id,
     occurrenceId: g.id,
     seriesId: g.seriesMasterId || null,
@@ -324,7 +331,7 @@ function createGraphProvider({ groupId, owner, calendarId }) {
     ? `/groups/${groupId}/calendar`
     : calendarId ? `/users/${owner}/calendars/${calendarId}` : `/users/${owner}/calendar`;
   const eventPath = (id) => (groupId ? `/groups/${groupId}/events/${id}` : `/users/${owner}/events/${id}`);
-  const expandMeta = `singleValueExtendedProperties($filter=id eq '${META_PROP}')`;
+  const expandMeta = `singleValueExtendedProperties($filter=id eq '${META_PROP}' or id eq '${DRAFT_PROP}')`;
 
   const graphFetch = async (path, { method = 'GET', body } = {}) => {
     const token = await acquireGraphToken(scopes);
@@ -378,6 +385,15 @@ function createGraphProvider({ groupId, owner, calendarId }) {
     async removeSeries(seriesId) {
       await graphFetch(eventPath(seriesId), { method: 'DELETE' });
     },
+    async findByDraftId(draftId) {
+      const safeId = String(draftId).replace(/'/g, "''");
+      const params = new URLSearchParams({
+        $filter: `singleValueExtendedProperties/Any(ep: ep/id eq '${DRAFT_PROP}' and ep/value eq '${safeId}')`,
+        $expand: expandMeta,
+      });
+      const page = await graphFetch(`${calendarRoot}/events?${params}`);
+      return page.value.map(fromGraph);
+    },
     subscribe(callback) {
       const timer = window.setInterval(callback, 30000);
       window.addEventListener('focus', callback);
@@ -402,4 +418,67 @@ export function getCalendarProvider() {
     cachedKind = kind;
   }
   return cachedProvider;
+}
+
+const resolvePerson = (name, people) => {
+  const value = (name || '').trim().toLowerCase();
+  if (!value || value === 'unassigned') return null;
+  return people.find((p) => p.name.toLowerCase() === value)
+    || people.find((p) => p.name.split(' ')[0].toLowerCase() === value)
+    || null;
+};
+
+// The calendar event that mirrors a draft's due date. Returns null when the draft has no due date.
+export function buildDraftDueEvent(draft, people) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(draft?.dueDate || '')) return null;
+  const start = fromDateKey(draft.dueDate);
+  const copywriter = resolvePerson(draft.copywriter, people);
+  const attendees = [draft.copywriter, draft.reviewerOne, draft.reviewerTwo, draft.reviewerThree, draft.manager]
+    .map((name) => resolvePerson(name, people)?.email.toLowerCase())
+    .filter((email, index, list) => email && list.indexOf(email) === index);
+  const finished = ['Completed', 'Approved', 'Closed'].includes(draft.status);
+  return {
+    draftId: draft.id,
+    title: `Due: ${draft.title}`,
+    category: DRAFT_CATEGORY.name,
+    allDay: true,
+    start: start.toISOString(),
+    end: addDays(start, 1).toISOString(),
+    owner: copywriter?.email.toLowerCase() || (draft.createdByEmail || '').toLowerCase(),
+    attendees,
+    status: finished ? 'Completed' : 'In progress',
+    showAs: 'free',
+    reminder: 1440,
+    location: 'Comms Hub · Templates',
+    description: [draft.brand, draft.documentType, (draft.currentStage || draft.type) && `Current step: ${draft.currentStage || draft.type}`, draft.priority && `Priority: ${draft.priority}`].filter(Boolean).join(' · '),
+    recurrence: null,
+    exceptions: [],
+  };
+}
+
+const draftSignature = (ev) => (ev ? JSON.stringify([ev.title, ev.start, ev.owner, [...ev.attendees].sort(), ev.status, ev.description]) : 'none');
+
+// Creates, updates or removes the team-calendar event for a draft so its due date always matches.
+export async function syncDraftDueDate(draft, people) {
+  const provider = getCalendarProvider();
+  const desired = buildDraftDueEvent(draft, people);
+  const existing = await provider.findByDraftId(draft.id);
+  const [current, ...duplicates] = existing;
+  await Promise.all(duplicates.map((ev) => provider.removeSeries(ev.id)));
+  if (!desired) {
+    if (current) await provider.removeSeries(current.id);
+    return;
+  }
+  const stamp = { updatedBy: 'Comms Hub', updatedAt: new Date().toISOString() };
+  if (!current) {
+    await provider.create({ ...desired, ...stamp, createdBy: desired.owner, createdAt: stamp.updatedAt });
+  } else if (draftSignature(current) !== draftSignature(desired)) {
+    await provider.updateSeries(current.id, { ...current, ...desired, ...stamp });
+  }
+}
+
+export async function removeDraftDueDate(draftId) {
+  const provider = getCalendarProvider();
+  const existing = await provider.findByDraftId(draftId);
+  await Promise.all(existing.map((ev) => provider.removeSeries(ev.id)));
 }
