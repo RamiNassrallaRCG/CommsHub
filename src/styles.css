@@ -3556,7 +3556,7 @@ body.split-view-locked { overflow: hidden; }
   background: rgba(15, 23, 42, .52);
 }
 .draft-modal {
-  width: min(100%, 735px);
+  width: min(100%, 1040px);
   max-height: calc(100vh - 36px);
   overflow: auto;
   border: 1px solid #dbe4f1;
