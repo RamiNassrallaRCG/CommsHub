@@ -25,6 +25,8 @@ import {
   Clock3,
   ClipboardList,
   Columns2,
+  Copy,
+  Download,
   Eraser,
   FastForward,
   FileText,
@@ -42,6 +44,8 @@ import {
   Lock,
   LifeBuoy,
   LogOut,
+  Mail,
+  MailCheck,
   MoonStar,
   Minus,
   Outdent,
@@ -469,11 +473,11 @@ const initialHistoryRows = [
   { date: 'Sep 18, 2026, 10:01 AM', title: 'Test', brand: 'Royal Caribbean', type: 'Itinerary Mod', copywriter: 'Colin Rourke', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 18, 2026, 10:01 AM', title: 'BAL', brand: 'Royal Caribbean', type: 'Talking Points', copywriter: 'Shirin Castro', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 14, 2026, 10:00 AM', title: 'test 2', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Jennifer Navas', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'Grammar' },
-  { date: 'Sep 14, 2026, 09:40 AM', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Marilyn Robleto', review2: 'Jennifer Navas', review3: 'Bianca Lopez', manager: 'Colin Rourke', status: 'Completed', total: '0h 36m', errors: 'Spelling', draft: seedHistoryDraft({ id: 'hist-air-travel', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity Cruises', documentType: 'Talking Points', people: ['Mateo Gomez', 'Marilyn Robleto', 'Jennifer Navas', 'Bianca Lopez', 'Colin Rourke'], versions: airTravelVersions, finalContent: airTravelVersions[3], seconds: { Copywriter: 480, 'Review 1': 540, 'Review 2': 420, 'Review 3': 360, Manager: 360 }, finishedAt: new Date(2026, 8, 14, 9, 40).getTime(), sections: [['Subject Line', 'Reason Statement'], ['Reason Statement', 'Change Statement'], ['Change Statement', 'Links'], ['Signature'], []], reviewTwo: { changeType: 'Content', errorType: 'Typo or grammar', notes: 'Added Gatwick and rebooking guidance for guests who booked air with us.' }, notes: 'Use the approved UK disruption talking points. Keep the tone calm and reassuring.' }) },
+  { date: 'Sep 14, 2026, 09:40 AM', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Marilyn Robleto', review2: 'Jennifer Navas', review3: 'Bianca Lopez', manager: 'Colin Rourke', status: 'Completed', total: '0h 36m', errors: 'Spelling', sentAt: new Date(2026, 8, 14, 10, 5).getTime(), sentBy: 'Mateo Gomez', draft: seedHistoryDraft({ id: 'hist-air-travel', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity Cruises', documentType: 'Talking Points', people: ['Mateo Gomez', 'Marilyn Robleto', 'Jennifer Navas', 'Bianca Lopez', 'Colin Rourke'], versions: airTravelVersions, finalContent: airTravelVersions[3], seconds: { Copywriter: 480, 'Review 1': 540, 'Review 2': 420, 'Review 3': 360, Manager: 360 }, finishedAt: new Date(2026, 8, 14, 9, 40).getTime(), sections: [['Subject Line', 'Reason Statement'], ['Reason Statement', 'Change Statement'], ['Change Statement', 'Links'], ['Signature'], []], reviewTwo: { changeType: 'Content', errorType: 'Typo or grammar', notes: 'Added Gatwick and rebooking guidance for guests who booked air with us.' }, notes: 'Use the approved UK disruption talking points. Keep the tone calm and reassuring.' }) },
   { date: 'Sep 9, 2026, 10:31 AM', title: 'AN 09/14/26 Oversell', brand: 'Celebrity', type: 'Oversell', copywriter: '—', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 8, 2026, 04:49 PM', title: 'TEST ONE', brand: 'Silversea', type: 'Deployment', copywriter: '—', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
-  { date: 'Sep 8, 2026, 01:09 PM', title: 'TEST 1', brand: 'Celebrity', type: 'Itinerary Mod', copywriter: 'Heidi McCord', review1: 'Zoe Pendas', review2: 'Mateo Gomez', review3: 'Bianca Lopez', manager: '—', status: 'Completed', total: '1h 54m', errors: 'Grammar' },
-  { date: 'Sep 4, 2026, 09:25 PM', title: 'SL: Anthem of the Seas: A Special Offer for You Cruise', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Mateo Gomez', review1: 'Heidi McCord', review2: 'Erick Weidmann', review3: 'Nelson Frau', manager: '—', status: 'Completed', total: '0h 37m', errors: 'None' },
+  { date: 'Sep 8, 2026, 01:09 PM', title: 'TEST 1', brand: 'Celebrity', type: 'Itinerary Mod', copywriter: 'Heidi McCord', review1: 'Zoe Pendas', review2: 'Mateo Gomez', review3: 'Bianca Lopez', manager: '—', status: 'Completed', total: '1h 54m', errors: 'Grammar', sentAt: new Date(2026, 8, 8, 14, 0).getTime(), sentBy: 'Heidi McCord' },
+  { date: 'Sep 4, 2026, 09:25 PM', title: 'SL: Anthem of the Seas: A Special Offer for You Cruise', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Mateo Gomez', review1: 'Heidi McCord', review2: 'Erick Weidmann', review3: 'Nelson Frau', manager: '—', status: 'Completed', total: '0h 37m', errors: 'None', sentAt: new Date(2026, 8, 5, 9, 12).getTime(), sentBy: 'Mateo Gomez' },
   { date: 'Sep 3, 2026, 04:51 PM', title: 'For Review: Your Royal Genie Package Experience Guest Copy', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Shirin Castro', review1: 'Bianca Lopez', review2: 'Hiodette', review3: 'Bianca Lopez', manager: 'Colin Rourke', status: 'Completed', total: '0h 55m', errors: 'Spelling • Grammar', draft: seedHistoryDraft({ id: 'hist-royal-genie', title: 'For Review: Your Royal Genie Package Experience Guest Copy', brand: 'Royal Caribbean', documentType: 'Deployment', people: ['Shirin Castro', 'Bianca Lopez', 'Hiodette', 'Bianca Lopez', 'Colin Rourke'], versions: genieCopyVersions, finalContent: genieCopyVersions[3].replace('We look forward to welcoming you onboard soon.', 'We look forward to welcoming you onboard soon.\n\nWarm regards,\nThe Royal Caribbean Team'), seconds: { Copywriter: 1080, 'Review 1': 720, 'Review 2': 600, 'Review 3': 480, Manager: 420 }, finishedAt: new Date(2026, 8, 3, 16, 51).getTime(), sections: [['Subject Line', 'Reason Statement', 'Signature'], ['Reason Statement', 'Change Statement'], ['Change Statement', 'Links'], ['Change Statement'], ['Signature']], reviewTwo: { changeType: 'Grammar', errorType: 'Incorrect information', notes: 'Removed The Key branding and added the 30-day contact window.' }, notes: 'Guest copy for the Royal Genie deployment. Confirm the 30-day outreach timing with the product team.' }) },
 ];
 
@@ -1035,6 +1039,8 @@ function App() {
   const [reopenStage, setReopenStage] = useState('');
   const [historyFullView, setHistoryFullView] = useState(false);
   const [historyCompareMode, setHistoryCompareMode] = useState('inline');
+  const [finalCopied, setFinalCopied] = useState(false);
+  const [sentAttachmentError, setSentAttachmentError] = useState('');
   const [onlineSearch, setOnlineSearch] = useState('');
   const onlinePanelRef = useRef(null);
   useEffect(() => {
@@ -1746,7 +1752,7 @@ function App() {
     setDrafts((current) => current.filter((item) => item.id !== draft.id));
     syncedDueDates.current.delete(draft.id);
     queueCalendarSync(() => removeDraftDueDate(draft.id));
-    setHistoryRows((current) => [{
+    const completedRow = {
       date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
       title: draft.title,
       brand: draft.brand,
@@ -1762,9 +1768,11 @@ function App() {
       content: draftContent,
       sections,
       draft: { ...draft, content: draftContent, stageSeconds, finalSections: sections, closedAt: Date.now(), closedBy: currentUser?.name },
-    }, ...current]);
+    };
+    setHistoryRows((current) => [completedRow, ...current]);
     setDraftSaved(false);
     backToDraftList();
+    window.setTimeout(() => openHistoryDetail(completedRow), 0);
   };
 
   const submitDraftContent = (sections = []) => {
@@ -1931,6 +1939,7 @@ function App() {
     }
     if (row.status === 'Completed') {
       events.push({ kind: 'completed', title: 'Approved and completed', person: fullPersonName(draft?.closedBy) || historyPerson(row, 'Manager'), at: draft?.closedAt, duration: draft?.stageSeconds?.Manager, sections: draft?.finalSections || [], detail: row.total ? `Total time ${row.total}` : '' });
+      if (row.sentAt) events.push({ kind: 'completed', title: 'Marked as sent to guests', person: fullPersonName(row.sentBy), at: row.sentAt, detail: row.sentAttachments?.length ? `${row.sentAttachments.length} sent email file${row.sentAttachments.length === 1 ? '' : 's'} attached` : '' });
     } else if (row.status === 'Deleted') {
       events.push({ kind: 'deleted', title: 'Draft deleted', person: fullPersonName(draft?.closedBy), at: draft?.closedAt, detail: 'Removed from the active drafts list' });
     } else {
@@ -1939,8 +1948,146 @@ function App() {
     return events;
   };
 
+  const updateHistoryRow = (row, patch) => {
+    const updated = { ...row, ...patch };
+    setHistoryRows((current) => current.map((item) => (item === row ? updated : item)));
+    setHistoryDetail((current) => (current === row ? updated : current));
+    return updated;
+  };
+
+  const getFinalDraftText = (row) => row.draft?.content || row.content || '';
+
+  const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const copyFinalDraft = async (row) => {
+    const text = getFinalDraftText(row);
+    if (!text) return;
+    const html = `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt">${text.split(/\n{2,}/).map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`).join('')}</div>`;
+    const copyViaSelection = () => {
+      const holder = document.createElement('div');
+      holder.contentEditable = 'true';
+      holder.innerHTML = html;
+      Object.assign(holder.style, { position: 'fixed', left: '-9999px', top: '0', whiteSpace: 'pre-wrap' });
+      document.body.appendChild(holder);
+      const range = document.createRange();
+      range.selectNodeContents(holder);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      selection.removeAllRanges();
+      holder.remove();
+      return ok;
+    };
+    if (!copyViaSelection()) {
+      try { await navigator.clipboard.writeText(text); } catch { return; }
+    }
+    setFinalCopied(true);
+    window.setTimeout(() => setFinalCopied(false), 2000);
+  };
+
+  const openFinalDraftInEmail = (row) => {
+    const body = getFinalDraftText(row);
+    const subject = row.draft?.title || row.title;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.length > 1800 ? `${body.slice(0, 1800)}…` : body)}`;
+  };
+
+  const toggleHistorySent = (row) => {
+    if (row.sentAt) updateHistoryRow(row, { sentAt: null, sentBy: null });
+    else updateHistoryRow(row, { sentAt: Date.now(), sentBy: currentUser?.name });
+  };
+
+  const addSentAttachments = (row, fileList) => {
+    const files = [...(fileList || [])];
+    const existing = row.sentAttachments || [];
+    if (!files.length) return;
+    if (existing.length + files.length > 5) { setSentAttachmentError('You can attach up to 5 files.'); return; }
+    const tooBig = files.find((file) => file.size > 10 * 1024 * 1024);
+    if (tooBig) { setSentAttachmentError(`${tooBig.name} is larger than 10 MB.`); return; }
+    setSentAttachmentError('');
+    updateHistoryRow(row, {
+      sentAttachments: [...existing, ...files.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        size: file.size,
+        url: URL.createObjectURL(file),
+        addedBy: currentUser?.name,
+        addedAt: Date.now(),
+      }))],
+    });
+  };
+
+  const removeSentAttachment = (row, id) => {
+    const target = (row.sentAttachments || []).find((file) => file.id === id);
+    if (target?.url) URL.revokeObjectURL(target.url);
+    updateHistoryRow(row, { sentAttachments: (row.sentAttachments || []).filter((file) => file.id !== id) });
+  };
+
+  const formatFileSize = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
+
+  const getHistoryStatusLabel = (row) => (row.status === 'Completed' ? (row.sentAt ? 'Sent' : 'Ready to send') : row.status);
+  const getHistoryStatusClass = (row) => (row.status === 'Completed' ? (row.sentAt ? 'sent' : 'ready') : row.status === 'Deleted' ? 'deleted' : 'neutral');
+
+  const renderFinalDraftPanel = (row) => {
+    const text = getFinalDraftText(row);
+    const approver = fullPersonName(row.draft?.closedBy) || historyPerson(row, 'Manager');
+    const attachments = row.sentAttachments || [];
+    return (
+      <div className="final-draft">
+        <div className="final-draft-head">
+          <div>
+            <h3><CheckCircle2 size={15} /> Final approved draft</h3>
+            <span>{approver ? `Approved by ${approver}` : 'Approved by the manager'}{row.draft?.closedAt ? ` · ${formatHistoryTime(row.draft.closedAt)}` : ` · ${row.date}`}</span>
+          </div>
+          {row.sentAt
+            ? <span className="final-draft-state sent"><MailCheck size={13} /> Sent</span>
+            : <span className="final-draft-state ready"><Mail size={13} /> Ready to send</span>}
+        </div>
+        <div className="final-draft-body">{text || 'No content was saved for this draft.'}</div>
+        <div className="final-draft-actions">
+          <button type="button" className="final-btn" disabled={!text} onClick={() => copyFinalDraft(row)}>
+            {finalCopied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy final draft</>}
+          </button>
+          <button type="button" className="final-btn" disabled={!text} onClick={() => openFinalDraftInEmail(row)}><Mail size={14} /> Open in email</button>
+          <button type="button" className={`final-btn ${row.sentAt ? '' : 'primary'}`} onClick={() => toggleHistorySent(row)}>
+            {row.sentAt ? <><Undo2 size={14} /> Mark as not sent</> : <><MailCheck size={14} /> Mark as sent</>}
+          </button>
+        </div>
+        {row.sentAt && <p className="final-draft-sent-note"><MailCheck size={13} /> Marked as sent to guests by {fullPersonName(row.sentBy) || 'a team member'} · {formatHistoryTime(row.sentAt)}</p>}
+
+        <div className="final-draft-attachments">
+          <div className="final-draft-attachments-head">
+            <strong><Paperclip size={14} /> Sent email</strong>
+            <small>Attach the email you sent (.eml, .msg, .pdf or a screenshot). Up to 5 files, 10 MB each.</small>
+          </div>
+          {attachments.length > 0 && (
+            <ul>
+              {attachments.map((file) => (
+                <li key={file.id}>
+                  <Paperclip size={13} />
+                  <a href={file.url} download={file.name}>{file.name}</a>
+                  <small>{formatFileSize(file.size)} · {fullPersonName(file.addedBy) || '—'}</small>
+                  <a className="final-draft-icon" href={file.url} download={file.name} aria-label={`Download ${file.name}`}><Download size={13} /></a>
+                  <button type="button" className="final-draft-icon" onClick={() => removeSentAttachment(row, file.id)} aria-label={`Remove ${file.name}`}><Trash2 size={13} /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <label className="final-draft-upload">
+            <input type="file" multiple accept=".eml,.msg,.pdf,.png,.jpg,.jpeg,.gif,.webp,.oft,.htm,.html" onChange={(event) => { addSentAttachments(row, event.target.files); event.target.value = ''; }} />
+            <Paperclip size={14} /> {attachments.length ? 'Attach another file' : 'Attach the sent email'}
+          </label>
+          {sentAttachmentError && <span className="error-message">{sentAttachmentError}</span>}
+        </div>
+      </div>
+    );
+  };
+
   const openHistoryDetail = (row) => {
     setHistoryHover(null);
+    setFinalCopied(false);
+    setSentAttachmentError('');
     const stages = row.draft ? getDraftStages(row.draft) : stageOrder.filter((stage) => stage !== 'Review 3' || cleanName(row.review3));
     setReopenStage(stages[stages.length - 1]);
     setHistoryFullView(false);
@@ -1986,7 +2133,7 @@ function App() {
   };
 
   const renderHistoryRow = (row, index) => {
-    const statusClass = row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral';
+    const statusClass = getHistoryStatusClass(row);
     return (
       <tr
         key={`${row.title}-${index}`}
@@ -2008,7 +2155,7 @@ function App() {
         <td>{row.review3 || '—'}</td>
         <td>{row.manager || '—'}</td>
         <td><span className={`status-text ${statusClass}`}>
-          {row.status === 'Completed' ? <Check size={11} /> : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {row.status}
+          {row.status === 'Completed' ? (row.sentAt ? <MailCheck size={11} /> : <Check size={11} />) : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {getHistoryStatusLabel(row)}
         </span></td>
         <td>{row.total ? <span className="total-time-cell"><Clock3 size={11} /> {row.total}</span> : '—'}</td>
         <td>{row.errors === 'None'
@@ -2031,7 +2178,7 @@ function App() {
       <div className="history-hover-card" style={{ left, top }} role="tooltip">
         <div className="history-hover-head">
           <strong>{row.title}</strong>
-          <span className={`status-text ${row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral'}`}>{row.status}</span>
+          <span className={`status-text ${getHistoryStatusClass(row)}`}>{getHistoryStatusLabel(row)}</span>
         </div>
         <div className="history-hover-meta">{row.brand} · {row.type} · {row.date}</div>
         <div className="history-hover-stages">
@@ -2117,7 +2264,7 @@ function App() {
     const totalAdded = snapshots.slice(1).reduce((sum, item) => sum + item.added, 0);
     const totalRemoved = snapshots.slice(1).reduce((sum, item) => sum + item.removed, 0);
     const overview = [
-      ['Status', row.status],
+      ['Status', getHistoryStatusLabel(row)],
       ['Brand', draft?.brand || row.brand],
       ['Document type', draft?.documentType || row.type],
       ['Priority', draft?.priority || '—'],
@@ -2258,7 +2405,7 @@ function App() {
     const events = buildHistoryTimeline(row);
     const finalContent = row.draft?.content || row.content || '';
     const stageChoices = row.draft ? getDraftStages(row.draft) : stageOrder.filter((stage) => stage !== 'Review 3' || cleanName(row.review3));
-    const statusClass = row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral';
+    const statusClass = getHistoryStatusClass(row);
     return (
       <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryDetail(null); }}>
         <div className={`history-detail ${historyFullView ? 'is-full' : ''}`} role="dialog" aria-modal="true" aria-labelledby="history-detail-title">
@@ -2272,7 +2419,7 @@ function App() {
             </div>
             <h2 id="history-detail-title">{row.title}</h2>
             <div className="history-detail-meta">
-              <span className={`status-text ${statusClass}`}>{row.status}</span>
+              <span className={`status-text ${statusClass}`}>{getHistoryStatusLabel(row)}</span>
               <span className="pill brand-pill">{row.brand}</span>
               <span className="pill type-pill">{row.type}</span>
               <span><Clock3 size={12} /> {row.total && row.total !== '0' ? row.total : 'No time logged'}</span>
@@ -2310,8 +2457,12 @@ function App() {
               </ol>
             </section>
             <section>
-              <h3>Final content</h3>
-              <div className="history-detail-content">{finalContent || 'No content was saved for this draft.'}</div>
+              {row.status === 'Completed' ? renderFinalDraftPanel(row) : (
+                <>
+                  <h3>Final content</h3>
+                  <div className="history-detail-content">{finalContent || 'No content was saved for this draft.'}</div>
+                </>
+              )}
               <h3>Errors reported</h3>
               <div>{row.errors === 'None' ? <span className="errors-none"><Check size={12} /> None</span> : <span className="errors-flag">{row.errors}</span>}</div>
             </section>
