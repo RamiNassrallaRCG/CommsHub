@@ -333,8 +333,8 @@ const templateDrafts = [
     stageSeconds: { Copywriter: 20 * 60, 'Review 1': 15 * 60 },
     stageStartedAt: agoMs({ minutes: 5 }),
     versions: [
-      { stage: 'Copywriter', content: 'Dear Guest,\n\nWe want to let you know about air travel disruptions affecting flights to and from the United Kingdom.\n\nWe will share updates as soon as we have them.' },
-      { stage: 'Review 1', content: 'Dear Guest,\n\nWe want to let you know about ongoing air travel disruptions affecting flights to and from the United Kingdom, including London Heathrow and Gatwick.\n\nWhat this means for you\nIf your flight is delayed or cancelled, please contact your airline directly for rebooking options. If you booked your flights through us, our team will reach out to you with next steps.\n\nWe will continue to share updates as soon as we have them. Thank you for your patience and understanding.' },
+      { stage: 'Copywriter', sections: ['Subject Line', 'Reason Statement', 'Signature'], content: 'Dear Guest,\n\nWe want to let you know about air travel disruptions affecting flights to and from the United Kingdom.\n\nWe will share updates as soon as we have them.' },
+      { stage: 'Review 1', sections: ['Reason Statement', 'Change Statement', 'Links'], content: 'Dear Guest,\n\nWe want to let you know about ongoing air travel disruptions affecting flights to and from the United Kingdom, including London Heathrow and Gatwick.\n\nWhat this means for you\nIf your flight is delayed or cancelled, please contact your airline directly for rebooking options. If you booked your flights through us, our team will reach out to you with next steps.\n\nWe will continue to share updates as soon as we have them. Thank you for your patience and understanding.' },
     ],
   },
   {
@@ -397,8 +397,8 @@ const templateDrafts = [
     stageSeconds: { Copywriter: 3 * 60, 'Review 1': 2 * 60 },
     stageStartedAt: agoMs({ minutes: 8 }),
     versions: [
-      { stage: 'Copywriter', content: 'Dear Guest,\n\nWe have an update to your Jewel of the Seas itinerary departing September 10, 2026.' },
-      { stage: 'Review 1', content: 'Dear Guest,\n\nWe\'re looking forward to welcoming you onboard Jewel of the Seas!\n\nAs we continue to plan your upcoming adventure, we want to inform you about an update to your September 10, 2026, itinerary. Due to port availability, we\'ve adjusted the order of our port calls. All scheduled ports remain on your itinerary.\n\nImportant Notes\nAny shore excursions booked through us will be automatically updated to reflect the new dates. Please review your Cruise Planner for the latest details.\n\nWe look forward to sailing with you soon.' },
+      { stage: 'Copywriter', sections: ['Subject Line', 'Grid', 'Your Day in Port/At Sea'], content: 'Dear Guest,\n\nWe have an update to your Jewel of the Seas itinerary departing September 10, 2026.' },
+      { stage: 'Review 1', sections: ['Change Statement', 'Grid', 'Cross-Referenced Itinerary'], content: 'Dear Guest,\n\nWe\'re looking forward to welcoming you onboard Jewel of the Seas!\n\nAs we continue to plan your upcoming adventure, we want to inform you about an update to your September 10, 2026, itinerary. Due to port availability, we\'ve adjusted the order of our port calls. All scheduled ports remain on your itinerary.\n\nImportant Notes\nAny shore excursions booked through us will be automatically updated to reflect the new dates. Please review your Cruise Planner for the latest details.\n\nWe look forward to sailing with you soon.' },
     ],
   },
   {
@@ -988,6 +988,7 @@ function App() {
   const [liveTick, setLiveTick] = useState(() => Date.now());
   const [priorityMenu, setPriorityMenu] = useState(null);
   const [lockPrompt, setLockPrompt] = useState(null);
+  const [sectionsPanelOpen, setSectionsPanelOpen] = useState(false);
   const syncedDueDates = useRef(new Map());
   const calendarSyncQueue = useRef(Promise.resolve());
 
@@ -2058,6 +2059,73 @@ function App() {
             })}
           </div>
         </section>
+
+        {currentStageIndex > 0 && (() => {
+          const cardFor = Object.fromEntries(assignmentCards.map((card) => [card.stage, card]));
+          const columns = draftStages.map((stage, index) => {
+            const version = [...(selectedDraft.versions || [])].reverse().find((item) => item.stage === stage);
+            const name = selectedDraft[cardFor[stage]?.field];
+            const assigned = name && name !== 'Unassigned' ? name : '';
+            const person = accessList.find((entry) => entry.name === assigned) || accessList.find((entry) => entry.name.split(' ')[0] === assigned);
+            return {
+              stage,
+              className: cardFor[stage]?.className || '',
+              name: person?.name || assigned || 'To be assigned',
+              done: index < currentStageIndex,
+              sections: version?.sections || [],
+            };
+          });
+          const doneColumns = columns.filter((column) => column.done);
+          return (
+            <section className={`sections-worked${sectionsPanelOpen ? ' open' : ''}`}>
+              <button type="button" className="sections-worked-toggle" onClick={() => setSectionsPanelOpen((open) => !open)} aria-expanded={sectionsPanelOpen}>
+                {sectionsPanelOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                <ClipboardList size={15} />
+                <strong>Sections worked on</strong>
+                {!sectionsPanelOpen && <span className="sections-worked-chips">
+                  {doneColumns.map((column) => <span key={column.stage} className={`sections-chip ${column.className}`}>{column.stage} · {column.sections.length}</span>)}
+                </span>}
+                <small>{sectionsPanelOpen ? 'Click to hide' : 'Click to expand'}</small>
+              </button>
+              {sectionsPanelOpen && (
+                <div className="sections-worked-body">
+                  <div className="sections-matrix-scroll">
+                    <table className="sections-matrix">
+                      <thead>
+                        <tr>
+                          <th scope="col">Section</th>
+                          {columns.map((column) => (
+                            <th key={column.stage} scope="col" className={column.className}>
+                              <span>{column.done ? <CheckCircle2 size={13} /> : <UserRound size={13} />}{column.stage}</span>
+                              <strong>{column.name}</strong>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {draftSections.map((section) => (
+                          <tr key={section}>
+                            <th scope="row">{section}</th>
+                            {columns.map((column) => {
+                              if (!column.done) return <td key={column.stage} className="pending">pending</td>;
+                              const worked = column.sections.includes(section);
+                              return (
+                                <td key={column.stage} className={worked ? 'worked' : ''} title={worked ? `${column.name} worked on ${section}` : `${column.name} did not mark ${section}`}>
+                                  {worked ? <span className="sections-mark"><CheckCircle2 size={13} /> {column.name.charAt(0)}</span> : <span className="sections-dot" aria-label="Not marked" />}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="sections-worked-note"><CheckCircle2 size={12} /> A green cell means that person confirmed they worked on that section. Hover a cell to see their full name.</p>
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         <div className="workflow-steps">
           {draftStages.map((stage, index) => {
