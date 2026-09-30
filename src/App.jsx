@@ -2142,15 +2142,6 @@ function App() {
 
         <section className="history-full-card">
           <h3>People and time by stage</h3>
-          {totalSeconds > 0 && (
-            <div className="history-time-bar" aria-label="Time spent by stage">
-              {stageRows.filter((item) => item.seconds > 0).map((item) => (
-                <span key={item.stage} className={`stage-${item.stage.replace(/\s+/g, '-').toLowerCase()}`} style={{ flexGrow: item.seconds }} title={`${item.stage}: ${formatChipDuration(item.seconds)}`}>
-                  {item.seconds / totalSeconds > 0.1 ? item.stage : ''}
-                </span>
-              ))}
-            </div>
-          )}
           <div className="history-full-table-wrap">
             <table className="history-full-table">
               <thead><tr><th>Stage</th><th>Person</th><th>Time spent</th><th>Share</th><th>Submitted</th><th>Words</th><th>Changes</th><th>Sections worked on</th></tr></thead>
@@ -2159,7 +2150,7 @@ function App() {
                   const title = accessList.find((entry) => entry.name === person)?.title;
                   return (
                     <tr key={stage}>
-                      <td><span className={`history-stage-chip stage-${stage.replace(/\s+/g, '-').toLowerCase()}`}>{stage}</span></td>
+                      <td className="history-stage-cell"><span className={`history-stage-chip stage-${stage.replace(/\s+/g, '-').toLowerCase()}`}>{stage}</span></td>
                       <td><strong>{person || '—'}</strong>{title && <small>{title}</small>}</td>
                       <td>{seconds ? formatChipDuration(seconds) : '—'}</td>
                       <td>{seconds && totalSeconds ? `${Math.round((seconds / totalSeconds) * 100)}%` : '—'}</td>
