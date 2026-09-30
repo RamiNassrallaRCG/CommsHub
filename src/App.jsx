@@ -433,18 +433,48 @@ const templateDrafts = [
   },
 ];
 
+const genieCopyVersions = [
+  'Dear Guest,\n\nThank you for booking the Royal Genie package for your upcoming cruise. Your Genie will be in touch before you sail to learn about your preferences.\n\nDuring your cruise you will enjoy priority access, reserved seating and a personalized itinerary.\n\nWe look forward to welcoming you onboard.',
+  'Dear Guest,\n\nThank you for booking The Key Royal Genie package for your upcoming cruise. Your personal Genie will reach out before you sail to learn about your preferences and plan every detail.\n\nDuring your cruise you will enjoy priority access, reserved seating at shows and a personalized daily itinerary.\n\nWe look forward to welcoming you onboard.',
+  'Dear Guest,\n\nThank you for booking the Royal Genie package for your upcoming cruise. Your personal Genie will reach out 30 days before you sail to learn about your preferences and plan every detail.\n\nDuring your cruise you will enjoy priority access to activities, reserved seating at shows and a personalized daily itinerary delivered to your stateroom.\n\nWe look forward to welcoming you onboard.',
+  'Dear Guest,\n\nThank you for booking the Royal Genie package for your upcoming cruise. Your personal Genie will reach out 30 days before you sail to learn about your preferences and plan every detail of your vacation.\n\nDuring your cruise, you will enjoy priority access to activities, reserved seating at shows and a personalized daily itinerary delivered to your stateroom.\n\nWe look forward to welcoming you onboard soon.',
+];
+
+const airTravelVersions = [
+  'Dear Guest,\n\nWe want to let you know about air travel disruptions affecting flights to and from the United Kingdom.\n\nWe will share updates as soon as we have them.',
+  'Dear Guest,\n\nWe want to let you know about ongoing air travel disruptions affecting flights to and from the United Kingdom, including London Heathrow.\n\nIf your flight is delayed or cancelled, please contact your airline directly.\n\nWe will share updates as soon as we have them.',
+  'Dear Guest,\n\nWe want to let you know about ongoing air travel disruptions affecting flights to and from the United Kingdom, including London Heathrow and Gatwick.\n\nIf your flight is delayed or cancelled, please contact your airline directly for rebooking options. If you booked your flights through us, our team will reach out with next steps.\n\nWe will continue to share updates as soon as we have them.',
+  'Dear Guest,\n\nWe want to let you know about ongoing air travel disruptions affecting flights to and from the United Kingdom, including London Heathrow and Gatwick.\n\nIf your flight is delayed or cancelled, please contact your airline directly for rebooking options. If you booked your flights through us, our team will reach out to you with next steps.\n\nWe will continue to share updates as soon as we have them. Thank you for your patience and understanding.',
+];
+
+const seedHistoryDraft = ({ id, title, brand, documentType, people, versions, finalContent, seconds, finishedAt, sections, reviewTwo, notes }) => {
+  const [copywriter, reviewerOne, reviewerTwo, reviewerThree, manager] = people;
+  const stages = ['Copywriter', 'Review 1', 'Review 2', 'Review 3'];
+  let at = finishedAt - Object.values(seconds).reduce((sum, value) => sum + value, 0) * 1000;
+  return {
+    id, title, brand, documentType, copywriter, reviewerOne, reviewerTwo, reviewerThree, manager,
+    priority: 'Normal', notes, startedAt: at, stageSeconds: seconds, content: finalContent,
+    reviewTwoReview: { ...reviewTwo, extraReview: true },
+    versions: versions.map((content, index) => {
+      at += seconds[stages[index]] * 1000;
+      return { stage: stages[index], content, sections: sections[index], at, by: people[index], ...(stages[index] === 'Review 2' ? { review: { reviewer: reviewerTwo, manager, ...reviewTwo } } : {}) };
+    }),
+    finalSections: sections[4], closedAt: finishedAt, closedBy: manager,
+  };
+};
+
 const initialHistoryRows = [
   { date: 'Sep 18, 2026, 10:01 AM', title: 'sdasdasd', brand: 'Silversea', type: 'Deployment', copywriter: '—', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 18, 2026, 10:01 AM', title: 'asdasdasd', brand: 'Celebrity Cruises', type: 'Talking Points', copywriter: 'Heidi McCord', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 18, 2026, 10:01 AM', title: 'Test', brand: 'Royal Caribbean', type: 'Itinerary Mod', copywriter: 'Colin Rourke', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 18, 2026, 10:01 AM', title: 'BAL', brand: 'Royal Caribbean', type: 'Talking Points', copywriter: 'Shirin Castro', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 14, 2026, 10:00 AM', title: 'test 2', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Jennifer Navas', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'Grammar' },
-  { date: 'Sep 14, 2026, 09:40 AM', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Marilyn Robl', review2: 'Jen', review3: 'Bianca Lopez', manager: '—', status: 'Completed', total: '0h 36m', errors: 'Spelling' },
+  { date: 'Sep 14, 2026, 09:40 AM', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity', type: 'Talking Points', copywriter: 'Mateo Gomez', review1: 'Marilyn Robleto', review2: 'Jennifer Navas', review3: 'Bianca Lopez', manager: 'Colin Rourke', status: 'Completed', total: '0h 36m', errors: 'Spelling', draft: seedHistoryDraft({ id: 'hist-air-travel', title: 'air travel disruptions affecting the United Kingdom and London', brand: 'Celebrity Cruises', documentType: 'Talking Points', people: ['Mateo Gomez', 'Marilyn Robleto', 'Jennifer Navas', 'Bianca Lopez', 'Colin Rourke'], versions: airTravelVersions, finalContent: airTravelVersions[3], seconds: { Copywriter: 480, 'Review 1': 540, 'Review 2': 420, 'Review 3': 360, Manager: 360 }, finishedAt: new Date(2026, 8, 14, 9, 40).getTime(), sections: [['Subject Line', 'Reason Statement'], ['Reason Statement', 'Change Statement'], ['Change Statement', 'Links'], ['Signature'], []], reviewTwo: { changeType: 'Content', errorType: 'Typo or grammar', notes: 'Added Gatwick and rebooking guidance for guests who booked air with us.' }, notes: 'Use the approved UK disruption talking points. Keep the tone calm and reassuring.' }) },
   { date: 'Sep 9, 2026, 10:31 AM', title: 'AN 09/14/26 Oversell', brand: 'Celebrity', type: 'Oversell', copywriter: '—', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 8, 2026, 04:49 PM', title: 'TEST ONE', brand: 'Silversea', type: 'Deployment', copywriter: '—', review1: '—', review2: '—', review3: '—', manager: '—', status: 'Deleted', total: '0', errors: 'None' },
   { date: 'Sep 8, 2026, 01:09 PM', title: 'TEST 1', brand: 'Celebrity', type: 'Itinerary Mod', copywriter: 'Heidi McCord', review1: 'Zoe Pendas', review2: 'Mateo Gomez', review3: 'Bianca Lopez', manager: '—', status: 'Completed', total: '1h 54m', errors: 'Grammar' },
   { date: 'Sep 4, 2026, 09:25 PM', title: 'SL: Anthem of the Seas: A Special Offer for You Cruise', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Mateo Gomez', review1: 'Heidi McCord', review2: 'Erick Weidmann', review3: 'Nelson Frau', manager: '—', status: 'Completed', total: '0h 37m', errors: 'None' },
-  { date: 'Sep 3, 2026, 04:51 PM', title: 'For Review: Your Royal Genie Package Experience Guest Copy', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Shirin Castro', review1: 'Bianca Lopez', review2: 'Hiodette', review3: 'Bianca Lopez', manager: '—', status: 'Completed', total: '0h 55m', errors: 'Spelling • Grammar' },
+  { date: 'Sep 3, 2026, 04:51 PM', title: 'For Review: Your Royal Genie Package Experience Guest Copy', brand: 'Royal Caribbean', type: 'Deployment', copywriter: 'Shirin Castro', review1: 'Bianca Lopez', review2: 'Hiodette', review3: 'Bianca Lopez', manager: 'Colin Rourke', status: 'Completed', total: '0h 55m', errors: 'Spelling • Grammar', draft: seedHistoryDraft({ id: 'hist-royal-genie', title: 'For Review: Your Royal Genie Package Experience Guest Copy', brand: 'Royal Caribbean', documentType: 'Deployment', people: ['Shirin Castro', 'Bianca Lopez', 'Hiodette', 'Bianca Lopez', 'Colin Rourke'], versions: genieCopyVersions, finalContent: genieCopyVersions[3].replace('We look forward to welcoming you onboard soon.', 'We look forward to welcoming you onboard soon.\n\nWarm regards,\nThe Royal Caribbean Team'), seconds: { Copywriter: 1080, 'Review 1': 720, 'Review 2': 600, 'Review 3': 480, Manager: 420 }, finishedAt: new Date(2026, 8, 3, 16, 51).getTime(), sections: [['Subject Line', 'Reason Statement', 'Signature'], ['Reason Statement', 'Change Statement'], ['Change Statement', 'Links'], ['Change Statement'], ['Signature']], reviewTwo: { changeType: 'Grammar', errorType: 'Incorrect information', notes: 'Removed The Key branding and added the 30-day contact window.' }, notes: 'Guest copy for the Royal Genie deployment. Confirm the 30-day outreach timing with the product team.' }) },
 ];
 
 function SelectField({ label, required = true, value, onChange, options, placeholder, icon: Icon, error }) {
@@ -1003,6 +1033,8 @@ function App() {
   const [historyDetail, setHistoryDetail] = useState(null);
   const [historyHover, setHistoryHover] = useState(null);
   const [reopenStage, setReopenStage] = useState('');
+  const [historyFullView, setHistoryFullView] = useState(false);
+  const [historyCompareMode, setHistoryCompareMode] = useState('inline');
   const [onlineSearch, setOnlineSearch] = useState('');
   const onlinePanelRef = useRef(null);
   useEffect(() => {
@@ -1911,6 +1943,7 @@ function App() {
     setHistoryHover(null);
     const stages = row.draft ? getDraftStages(row.draft) : stageOrder.filter((stage) => stage !== 'Review 3' || cleanName(row.review3));
     setReopenStage(stages[stages.length - 1]);
+    setHistoryFullView(false);
     setHistoryDetail(row);
   };
 
@@ -2016,6 +2049,218 @@ function App() {
     );
   };
 
+  const buildStageSnapshots = (row) => {
+    const draft = row.draft;
+    if (!draft) return [];
+    const snapshots = (draft.versions || []).map((version) => ({
+      stage: version.stage,
+      person: fullPersonName(version.by) || fullPersonName(draft[historyStageFields[version.stage]]),
+      at: version.at,
+      content: version.content || '',
+      sections: version.sections || [],
+      review: version.review,
+      seconds: draft.stageSeconds?.[version.stage],
+    }));
+    if (row.status === 'Completed') {
+      snapshots.push({
+        stage: 'Manager',
+        person: fullPersonName(draft.closedBy) || fullPersonName(draft.manager),
+        at: draft.closedAt,
+        content: draft.content || row.content || '',
+        sections: draft.finalSections || [],
+        seconds: draft.stageSeconds?.Manager,
+        final: true,
+      });
+    }
+    return snapshots.map((snapshot, index) => {
+      const previous = index > 0 ? snapshots[index - 1] : null;
+      const diff = diffWords(previous?.content || '', snapshot.content);
+      return {
+        ...snapshot,
+        previous,
+        diff,
+        added: diff.filter((part) => part.type === 'added').length,
+        removed: diff.filter((part) => part.type === 'removed').length,
+        words: (snapshot.content.match(/\S+/g) || []).length,
+      };
+    });
+  };
+
+  const stripHtml = (html = '') => {
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    return (element.innerText || element.textContent || '').trim();
+  };
+
+  const renderDiffText = (diff, side) => diff.map((part, index) => {
+    if (side === 'before' && part.type === 'added') return null;
+    if (side === 'after' && part.type === 'removed') return null;
+    const trailing = !side && part.type === 'removed' ? ' ' : part.raw.slice(part.word.length);
+    if (part.type === 'equal') return <span key={index}>{part.raw}</span>;
+    return <span key={index}><span className={part.type === 'added' ? 'diff-added' : 'diff-removed'}>{part.word}</span>{trailing}</span>;
+  });
+
+  const renderHistoryFullReport = (row, events) => {
+    const draft = row.draft;
+    const snapshots = buildStageSnapshots(row);
+    const stageRows = stageOrder
+      .map((stage) => {
+        const snapshot = [...snapshots].reverse().find((item) => item.stage === stage);
+        const seconds = Number(draft?.stageSeconds?.[stage]) || Number(snapshot?.seconds) || 0;
+        const person = snapshot?.person || historyPerson(row, stage);
+        return { stage, person, seconds, snapshot };
+      })
+      .filter(({ person, seconds, snapshot }) => person || seconds || snapshot);
+    const totalSeconds = stageRows.reduce((sum, item) => sum + item.seconds, 0);
+    const review = snapshots.find((item) => item.review)?.review || (draft?.reviewTwoReview?.changeType ? draft.reviewTwoReview : null);
+    const briefNotes = stripHtml(draft?.notes || '');
+    const totalAdded = snapshots.slice(1).reduce((sum, item) => sum + item.added, 0);
+    const totalRemoved = snapshots.slice(1).reduce((sum, item) => sum + item.removed, 0);
+    const overview = [
+      ['Status', row.status],
+      ['Brand', draft?.brand || row.brand],
+      ['Document type', draft?.documentType || row.type],
+      ['Priority', draft?.priority || '—'],
+      ['Due date', draft?.dueDate ? new Date(`${draft.dueDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'],
+      ['Started', formatHistoryTime(draft?.startedAt) || '—'],
+      ['Finished', formatHistoryTime(draft?.closedAt) || row.date],
+      [row.status === 'Deleted' ? 'Deleted by' : 'Closed by', fullPersonName(draft?.closedBy) || '—'],
+      ['Total time', totalSeconds ? formatChipDuration(totalSeconds) : row.total && row.total !== '0' ? row.total : '—'],
+      ['Versions saved', String(snapshots.length)],
+      ['Words changed', snapshots.length > 1 ? `+${totalAdded} / −${totalRemoved}` : '—'],
+      ['Errors reported', row.errors],
+    ];
+    return (
+      <div className="history-full">
+        <section className="history-full-card">
+          <h3>Overview</h3>
+          <dl className="history-full-overview">
+            {overview.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+          </dl>
+          {briefNotes && <div className="history-full-brief"><strong>Reference brief</strong><p>{briefNotes}</p></div>}
+        </section>
+
+        <section className="history-full-card">
+          <h3>People and time by stage</h3>
+          {totalSeconds > 0 && (
+            <div className="history-time-bar" aria-label="Time spent by stage">
+              {stageRows.filter((item) => item.seconds > 0).map((item) => (
+                <span key={item.stage} className={`stage-${item.stage.replace(/\s+/g, '-').toLowerCase()}`} style={{ flexGrow: item.seconds }} title={`${item.stage}: ${formatChipDuration(item.seconds)}`}>
+                  {item.seconds / totalSeconds > 0.1 ? item.stage : ''}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="history-full-table-wrap">
+            <table className="history-full-table">
+              <thead><tr><th>Stage</th><th>Person</th><th>Time spent</th><th>Share</th><th>Submitted</th><th>Words</th><th>Changes</th><th>Sections worked on</th></tr></thead>
+              <tbody>
+                {stageRows.map(({ stage, person, seconds, snapshot }) => {
+                  const title = accessList.find((entry) => entry.name === person)?.title;
+                  return (
+                    <tr key={stage}>
+                      <td><span className={`history-stage-chip stage-${stage.replace(/\s+/g, '-').toLowerCase()}`}>{stage}</span></td>
+                      <td><strong>{person || '—'}</strong>{title && <small>{title}</small>}</td>
+                      <td>{seconds ? formatChipDuration(seconds) : '—'}</td>
+                      <td>{seconds && totalSeconds ? `${Math.round((seconds / totalSeconds) * 100)}%` : '—'}</td>
+                      <td>{snapshot?.at ? formatHistoryTime(snapshot.at) : '—'}</td>
+                      <td>{snapshot ? snapshot.words : '—'}</td>
+                      <td>{snapshot?.previous ? <span className="history-change-counts"><span className="added">+{snapshot.added}</span><span className="removed">−{snapshot.removed}</span></span> : snapshot ? 'Original' : '—'}</td>
+                      <td>{snapshot?.sections?.length ? <div className="history-event-sections">{snapshot.sections.map((section) => <span key={section}>{section}</span>)}</div> : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {review && (
+          <section className="history-full-card">
+            <h3>Review 2 feedback</h3>
+            <dl className="history-full-overview">
+              <div><dt>Reviewer</dt><dd>{fullPersonName(review.reviewer) || '—'}</dd></div>
+              <div><dt>Change type</dt><dd>{review.changeType || '—'}</dd></div>
+              <div><dt>Error type</dt><dd>{review.errorType || 'None'}</dd></div>
+              <div><dt>Routing</dt><dd>{review.extraReview ? 'Sent to Review 3' : review.directToManager ? 'Sent directly to Manager' : 'Sent to Manager'}</dd></div>
+              <div><dt>Approving manager</dt><dd>{fullPersonName(review.manager || draft?.manager) || '—'}</dd></div>
+            </dl>
+            {review.notes && <div className="history-full-brief"><strong>Reviewer notes</strong><p>{review.notes}</p></div>}
+          </section>
+        )}
+
+        <section className="history-full-card">
+          <div className="history-full-card-head">
+            <h3>Changes between stages</h3>
+            {snapshots.length > 0 && (
+              <div className="history-compare-toggle" role="tablist" aria-label="Comparison layout">
+                <button type="button" role="tab" aria-selected={historyCompareMode === 'inline'} className={historyCompareMode === 'inline' ? 'active' : ''} onClick={() => setHistoryCompareMode('inline')}><Highlighter size={13} /> Highlighted</button>
+                <button type="button" role="tab" aria-selected={historyCompareMode === 'side'} className={historyCompareMode === 'side' ? 'active' : ''} onClick={() => setHistoryCompareMode('side')}><Columns2 size={13} /> Side by side</button>
+              </div>
+            )}
+          </div>
+          {snapshots.length === 0 ? (
+            <p className="history-full-empty">No saved versions for this draft. It was closed before any stage submitted content, or it was logged before version tracking was added.</p>
+          ) : (
+            <div className="history-diff-list">
+              {snapshots.map((snapshot, index) => {
+                const unchanged = snapshot.previous && snapshot.added === 0 && snapshot.removed === 0;
+                return (
+                  <article key={`${snapshot.stage}-${index}`} className="history-diff-step">
+                    <header>
+                      <span className={`history-stage-chip stage-${snapshot.stage.replace(/\s+/g, '-').toLowerCase()}`}>{snapshot.stage}</span>
+                      <strong>{snapshot.previous ? `Changes from ${snapshot.previous.stage}` : 'Original draft'}</strong>
+                      <span className="history-diff-meta">
+                        {snapshot.person && <span><UserRound size={12} /> {snapshot.person}</span>}
+                        {snapshot.at && <span><Clock3 size={12} /> {formatHistoryTime(snapshot.at)}</span>}
+                        {Number(snapshot.seconds) > 0 && <span>{formatChipDuration(snapshot.seconds)} spent</span>}
+                      </span>
+                      {snapshot.previous && <span className="history-change-counts"><span className="added">+{snapshot.added} added</span><span className="removed">−{snapshot.removed} removed</span></span>}
+                    </header>
+                    {snapshot.sections.length > 0 && <div className="history-event-sections">{snapshot.sections.map((section) => <span key={section}>{section}</span>)}</div>}
+                    {!snapshot.content ? (
+                      <p className="history-full-empty">No content was saved at this stage.</p>
+                    ) : !snapshot.previous ? (
+                      <div className="history-diff-text">{snapshot.content}</div>
+                    ) : unchanged ? (
+                      <p className="history-full-empty">Approved with no text changes.</p>
+                    ) : historyCompareMode === 'side' ? (
+                      <div className="history-diff-side">
+                        <div><span>{snapshot.previous.stage}</span><div className="history-diff-text">{renderDiffText(snapshot.diff, 'before')}</div></div>
+                        <div><span>{snapshot.stage}</span><div className="history-diff-text">{renderDiffText(snapshot.diff, 'after')}</div></div>
+                      </div>
+                    ) : (
+                      <div className="history-diff-text">{renderDiffText(snapshot.diff)}</div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="history-full-card">
+          <h3>Activity log</h3>
+          <ol className="history-timeline">
+            {events.map((event, index) => (
+              <li key={index} className={`history-event ${event.kind}`}>
+                <span className="history-event-dot" />
+                <div>
+                  <div className="history-event-title"><strong>{event.title}</strong>{event.at && <time>{formatHistoryTime(event.at)}</time>}</div>
+                  <div className="history-event-sub">
+                    {event.person && <span><UserRound size={12} /> {event.person}</span>}
+                    {Number(event.duration) > 0 && <span><Clock3 size={12} /> {formatChipDuration(event.duration)}</span>}
+                    {event.detail && <span>{event.detail}</span>}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
+    );
+  };
+
   const renderHistoryDetail = () => {
     if (!historyDetail) return null;
     const row = historyDetail;
@@ -2025,10 +2270,15 @@ function App() {
     const statusClass = row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral';
     return (
       <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryDetail(null); }}>
-        <div className="history-detail" role="dialog" aria-modal="true" aria-labelledby="history-detail-title">
+        <div className={`history-detail ${historyFullView ? 'is-full' : ''}`} role="dialog" aria-modal="true" aria-labelledby="history-detail-title">
           <button type="button" className="modal-close" onClick={() => setHistoryDetail(null)} aria-label="Close"><X size={17} /></button>
           <div className="history-detail-head">
-            <span className="history-detail-readonly"><Lock size={12} /> Read only</span>
+            <div className="history-detail-toprow">
+              <span className="history-detail-readonly"><Lock size={12} /> Read only</span>
+              <button type="button" className="history-full-toggle" onClick={() => setHistoryFullView((value) => !value)}>
+                {historyFullView ? <><ChevronLeft size={14} /> Back to summary</> : <><FileText size={14} /> Open full details</>}
+              </button>
+            </div>
             <h2 id="history-detail-title">{row.title}</h2>
             <div className="history-detail-meta">
               <span className={`status-text ${statusClass}`}>{row.status}</span>
@@ -2039,7 +2289,7 @@ function App() {
             </div>
           </div>
 
-          <div className="history-detail-body">
+          {historyFullView ? renderHistoryFullReport(row, events) : <div className="history-detail-body">
             <section>
               <h3>Activity</h3>
               <ol className="history-timeline">
@@ -2074,7 +2324,7 @@ function App() {
               <h3>Errors reported</h3>
               <div>{row.errors === 'None' ? <span className="errors-none"><Check size={12} /> None</span> : <span className="errors-flag">{row.errors}</span>}</div>
             </section>
-          </div>
+          </div>}
 
           <div className="history-detail-footer">
             {canReopenHistory ? (

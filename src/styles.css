@@ -4054,3 +4054,57 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 
 /* Current stage is locked to whoever opened it */
 .assignment-claimed { display: inline-flex; align-items: center; gap: 4px; align-self: center; padding: 3px 9px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; opacity: .85; cursor: default; }
+/* History: full details report */
+.history-detail.is-full { width: min(1320px, calc(100vw - 32px)); height: calc(100vh - 48px); }
+.history-detail-toprow { display: flex; align-items: center; gap: 10px; margin-right: 40px; }
+.history-full-toggle { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 7px 13px; border: 1px solid #c7c2f5; border-radius: 8px; background: #f3f1ff; color: #4f46e5; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.history-full-toggle:hover { background: #e8e5ff; border-color: #a5a0f0; }
+.history-full { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 24px; display: flex; flex-direction: column; gap: 16px; background: var(--surface); }
+.history-full-card { padding: 16px 18px; border: 1px solid var(--panel-border); border-radius: 12px; background: var(--surface-strong); }
+.history-full-card h3 { margin: 0 0 12px; color: var(--text); font-size: 14px; }
+.history-full-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.history-full-card-head h3 { margin: 0; }
+.history-full-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 0; }
+.history-full-overview > div { padding: 9px 12px; border-radius: 9px; background: var(--surface); border: 1px solid var(--panel-border); }
+.history-full-overview dt { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.history-full-overview dd { margin: 3px 0 0; color: var(--text); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.history-full-brief { margin-top: 12px; padding: 10px 12px; border-left: 3px solid #a5a0f0; border-radius: 6px; background: #f6f5ff; }
+.history-full-brief strong { font-size: 12px; color: #4338ca; }
+.history-full-brief p { margin: 4px 0 0; color: var(--text); font-size: 13px; white-space: pre-wrap; }
+.history-full-empty { margin: 0; color: var(--text-muted); font-size: 13px; }
+.history-time-bar { display: flex; height: 26px; margin-bottom: 12px; border-radius: 8px; overflow: hidden; gap: 2px; }
+.history-time-bar span { display: flex; align-items: center; justify-content: center; min-width: 6px; color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.history-time-bar .stage-copywriter, .history-stage-chip.stage-copywriter { background: #d97706; }
+.history-time-bar .stage-review-1, .history-stage-chip.stage-review-1 { background: #0284c7; }
+.history-time-bar .stage-review-2, .history-stage-chip.stage-review-2 { background: #6366f1; }
+.history-time-bar .stage-review-3, .history-stage-chip.stage-review-3 { background: #0d9488; }
+.history-time-bar .stage-manager, .history-stage-chip.stage-manager { background: #c026d3; }
+.history-stage-chip { display: inline-flex; padding: 2px 9px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.history-full-table-wrap { overflow-x: auto; }
+.history-full-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.history-full-table th { padding: 8px 10px; border-bottom: 1px solid var(--panel-border); color: var(--text-muted); font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; }
+.history-full-table td { padding: 9px 10px; border-bottom: 1px solid var(--panel-border); color: var(--text); vertical-align: top; }
+.history-full-table tr:last-child td { border-bottom: 0; }
+.history-full-table td strong { display: block; }
+.history-full-table td small { color: var(--text-muted); font-size: 11px; }
+.history-change-counts { display: inline-flex; gap: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.history-change-counts .added { color: #11643c; background: #d6f5e3; padding: 1px 7px; border-radius: 999px; }
+.history-change-counts .removed { color: #a12626; background: #fbdada; padding: 1px 7px; border-radius: 999px; }
+.history-compare-toggle { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--surface); border: 1px solid var(--panel-border); }
+.history-compare-toggle button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.history-compare-toggle button.active { background: var(--surface-strong); color: #4f46e5; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+.history-diff-list { display: flex; flex-direction: column; gap: 12px; }
+.history-diff-step { padding: 12px 14px; border: 1px solid var(--panel-border); border-radius: 10px; background: var(--surface); }
+.history-diff-step header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 8px; }
+.history-diff-step header > strong { color: var(--text); font-size: 13px; }
+.history-diff-meta { display: inline-flex; flex-wrap: wrap; gap: 10px; color: var(--text-muted); font-size: 12px; }
+.history-diff-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.history-diff-step header .history-change-counts { margin-left: auto; }
+.history-diff-step .history-event-sections { margin-bottom: 8px; }
+.history-diff-text { padding: 12px 14px; border-radius: 8px; background: var(--surface-strong); border: 1px solid var(--panel-border); color: var(--text); font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.history-diff-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.history-diff-side > div > span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 11.5px; font-weight: 600; }
+.history-full .history-timeline { margin: 0; }
+.dark-theme .history-full-toggle { background: #221f45; border-color: #3d3880; color: #b9b4ff; }
+.dark-theme .history-full-brief { background: #1d1b3a; }
+@media (max-width: 760px) { .history-diff-side { grid-template-columns: 1fr; } }
