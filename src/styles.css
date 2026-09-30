@@ -3945,3 +3945,7 @@ body.split-view-locked { overflow: hidden; }
 .dark-theme .sections-matrix thead th, .dark-theme .sections-matrix td { border-color: #26324a; }
 .dark-theme .sections-matrix td.worked { background: rgba(16, 185, 129, .14); }
 .dark-theme .sections-mark { background: rgba(16, 185, 129, .25); color: #6ee7b7; }
+/* Approve & lock buttons: solid when ready, faded when requirements missing */
+.review-two-approval-footer .button.primary:not(:disabled) { border-color: #4f46e5; background: #4f46e5; color: #fff; opacity: 1; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); cursor: pointer; transition: background .15s, box-shadow .15s; }
+.review-two-approval-footer .button.primary:not(:disabled):hover { border-color: #4338ca; background: #4338ca; }
+.review-two-approval-footer .button.primary:disabled { border-color: #c9c6f5; background: #c9c6f5; color: #fff; opacity: .85; box-shadow: none; }
