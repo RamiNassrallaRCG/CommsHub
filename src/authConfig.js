@@ -8,6 +8,10 @@ export const entraTenantId = import.meta.env.VITE_ENTRA_TENANT_ID || '';
 
 export const isEntraConfigured = Boolean(entraClientId && entraTenantId);
 
+// Set VITE_SSO=true when the app sits behind Container Apps Easy Auth (CommsFlow): the user is already
+// signed in, /api/me says who they are, and the login screen is skipped. Unset (GitHub Pages) = login screen.
+export const ssoEnabled = import.meta.env.VITE_SSO === 'true';
+
 const redirectUri = `${window.location.origin}${import.meta.env.BASE_URL}`;
 
 export const msalInstance = isEntraConfigured

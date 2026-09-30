@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import royalLogoWhite from './assets/royal-logo-white.png';
-import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
+import { getAccountEmails, initMicrosoftSignIn, isEntraConfigured, ssoEnabled, startMicrosoftSignIn, startMicrosoftSignOut } from './authConfig';
 import TeamCalendar, { CalendarReminders } from './TeamCalendar';
 import { buildDraftDueEvent, removeDraftDueDate, syncDraftDueDate } from './calendarStore';
 import {
@@ -1088,6 +1088,34 @@ function App() {
     localStorage.setItem('comms-hub-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
+  // SSO (CommsFlow): Easy Auth already signed the user in; /api/me returns who they are.
+  // Unknown emails join the access list as plain Users, so the allow-list doesn't gate entry.
+  useEffect(() => {
+    if (!ssoEnabled) return undefined;
+    let cancelled = false;
+    fetch('/api/me')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Could not read your sign-in (${res.status}).`);
+        return res.json();
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) return { email: ADMIN_EMAIL, name: 'Local dev' };
+        throw error;
+      })
+      .then(({ email, name }) => {
+        if (cancelled) return;
+        const key = email.toLowerCase();
+        let entry = accessList.find((person) => person.email.toLowerCase() === key);
+        if (!entry) {
+          entry = { name, email: key, title: 'Team member', view: 'User', status: 'Allowed', blockedPages: [] };
+          setAccessList((current) => [...current, entry]);
+        }
+        openWorkspaceFor(entry);
+      })
+      .catch((error) => { if (!cancelled) setLoginError(error.message); });
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => {
     if (!isEntraConfigured) return;
     let cancelled = false;
@@ -1351,7 +1379,8 @@ function App() {
     setLoginError('');
     setActiveNav('Log');
     window.history.replaceState(null, '', window.location.href);
-    if (isEntraConfigured) startMicrosoftSignOut();
+    if (ssoEnabled) window.location.href = '/.auth/logout';
+    else if (isEntraConfigured) startMicrosoftSignOut();
   };
 
   const addAccessUser = (event) => {
@@ -1408,6 +1437,16 @@ function App() {
     setSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (!isAuthenticated && ssoEnabled) {
+    return (
+      <div className={`app-shell ${darkMode ? 'dark-theme' : 'light-theme'}`}>
+        <div className="login-page">
+          <p role={loginError ? 'alert' : 'status'}>{loginError || 'Signing you in…'}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -3690,6 +3729,7 @@ function App() {
             {darkMode ? <SunMedium size={16} /> : <MoonStar size={16} />}
             <span>{darkMode ? 'Light mode' : 'Dark mode'}</span>
           </button>
+          {ssoEnabled && <a className="sign-out" href="/v2" style={{ textDecoration: 'none' }}><span>V2 · CommsFlow</span></a>}
           <button type="button" className="sign-out" onClick={handleLogout}><LogOut size={16} /> <span>Sign out</span></button>
         </div>
       </header>
