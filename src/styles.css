@@ -4108,3 +4108,7 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 .dark-theme .history-full-toggle { background: #221f45; border-color: #3d3880; color: #b9b4ff; }
 .dark-theme .history-full-brief { background: #1d1b3a; }
 @media (max-width: 760px) { .history-diff-side { grid-template-columns: 1fr; } }
+/* People and time table: centered columns */
+.history-full-table th, .history-full-table td { text-align: center; vertical-align: middle; }
+.history-full-table .history-event-sections { justify-content: center; }
+.history-full-table .history-change-counts { justify-content: center; }
