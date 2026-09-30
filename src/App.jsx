@@ -990,6 +990,9 @@ function App() {
   const [lockPrompt, setLockPrompt] = useState(null);
   const [sectionsPanelOpen, setSectionsPanelOpen] = useState(false);
   const [onlinePanelOpen, setOnlinePanelOpen] = useState(false);
+  const [historyDetail, setHistoryDetail] = useState(null);
+  const [historyHover, setHistoryHover] = useState(null);
+  const [reopenStage, setReopenStage] = useState('');
   const [onlineSearch, setOnlineSearch] = useState('');
   const onlinePanelRef = useRef(null);
   useEffect(() => {
@@ -1631,6 +1634,7 @@ function App() {
       status: 'Deleted',
       total: '0',
       errors: 'None',
+      draft: { ...draft, closedAt: Date.now(), closedBy: currentUser?.name },
     }, ...current]);
     setPriorityMenu(null);
     if (selectedDraft?.id === draft.id) setSelectedDraft(null);
@@ -1689,7 +1693,7 @@ function App() {
   const completeDraft = (sections = []) => {
     const draft = selectedDraft;
     const managerSeconds = Math.max(0, Math.floor((Date.now() - Number(draft.stageStartedAt || draft.startedAt)) / 1000));
-    const stageSeconds = { ...draft.stageSeconds, Manager: managerSeconds };
+    const stageSeconds = { ...draft.stageSeconds, Manager: (Number(draft.stageSeconds?.Manager) || 0) + managerSeconds };
     const totalSeconds = Object.values(stageSeconds).reduce((sum, value) => sum + (Number(value) || 0), 0);
     setDrafts((current) => current.filter((item) => item.id !== draft.id));
     syncedDueDates.current.delete(draft.id);
@@ -1709,9 +1713,10 @@ function App() {
       errors: 'None',
       content: draftContent,
       sections,
+      draft: { ...draft, content: draftContent, stageSeconds, finalSections: sections, closedAt: Date.now(), closedBy: currentUser?.name },
     }, ...current]);
     setDraftSaved(false);
-    setSelectedDraft(null);
+    backToDraftList();
   };
 
   const submitDraftContent = (sections = []) => {
@@ -1738,7 +1743,7 @@ function App() {
       ...(stage === 'Review 1' ? { reviewTwoContent: '' } : {}),
       ...(stage === 'Review 2' && nextStage === 'Review 3' ? { reviewThreeContent: '' } : {}),
       versions: [...(selectedDraft.versions || []), {
-        stage, content: draftContent, sections,
+        stage, content: draftContent, sections, at: Date.now(), by: currentUser?.name,
         ...(stage === 'Review 2' ? { review: {
           reviewer: selectedDraft.reviewerTwo,
           changeType: 'Content',
@@ -1828,6 +1833,248 @@ function App() {
           <div className="lock-modal-actions">
             <button type="button" className="button secondary" onClick={() => setLockPrompt(null)}>Cancel</button>
             <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> {stage === 'Manager' ? 'Yes, approve' : 'Yes, lock it'}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const canReopenHistory = currentUser?.view === 'Manager' || currentUser?.email === ADMIN_EMAIL;
+  const historyStageFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager' };
+  const historyRowFields = { Copywriter: 'copywriter', 'Review 1': 'review1', 'Review 2': 'review2', 'Review 3': 'review3', Manager: 'manager' };
+  const cleanName = (name) => (name && name !== '—' && name !== 'Unassigned' ? name : '');
+  const fullPersonName = (name) => {
+    const clean = cleanName(name);
+    if (!clean) return '';
+    return (accessList.find((person) => person.name === clean) || accessList.find((person) => person.name.split(' ')[0] === clean))?.name || clean;
+  };
+  const formatHistoryTime = (value) => (value ? new Date(value).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const historyPerson = (row, stage) => fullPersonName(row.draft ? row.draft[historyStageFields[stage]] : row[historyRowFields[stage]]);
+
+  const buildHistoryTimeline = (row) => {
+    const draft = row.draft;
+    const events = [];
+    if (draft) {
+      events.push({ kind: 'created', title: 'Draft created', person: fullPersonName(draft.copywriter), detail: `Assigned to ${fullPersonName(draft.copywriter) || 'the copywriter'} as copywriter` });
+      const versions = draft.versions || [];
+      const reopenings = draft.activity || [];
+      stageOrder.filter((stage) => stage !== 'Manager' && Number(draft.stageSeconds?.[stage]) > 0 && !versions.some((version) => version.stage === stage))
+        .forEach((stage) => events.push({ kind: 'submitted', title: `${stage} completed`, person: fullPersonName(draft[historyStageFields[stage]]), duration: draft.stageSeconds[stage] }));
+      versions.forEach((version, index) => {
+        reopenings.filter((entry) => entry.versionCount === index).forEach((entry) => events.push({ kind: 'reopened', title: `Reopened at ${entry.stage}`, person: entry.by, at: entry.at, detail: `Status changed from ${entry.from} back to ${entry.stage}` }));
+        const review = version.review;
+        events.push({
+          kind: 'submitted',
+          title: `${version.stage} submitted and locked`,
+          person: fullPersonName(version.by) || fullPersonName(draft[historyStageFields[version.stage]]),
+          at: version.at,
+          duration: draft.stageSeconds?.[version.stage],
+          sections: version.sections || [],
+          detail: review && review.errorType && review.errorType !== 'None' ? `Error reported: ${review.errorType}` : '',
+          content: version.content,
+        });
+      });
+      reopenings.filter((entry) => entry.versionCount >= versions.length).forEach((entry) => events.push({ kind: 'reopened', title: `Reopened at ${entry.stage}`, person: entry.by, at: entry.at, detail: `Status changed from ${entry.from} back to ${entry.stage}` }));
+    } else {
+      stageOrder.forEach((stage) => {
+        const person = historyPerson(row, stage);
+        if (person) events.push({ kind: 'submitted', title: `${stage} completed`, person });
+      });
+    }
+    if (row.status === 'Completed') {
+      events.push({ kind: 'completed', title: 'Approved and completed', person: fullPersonName(draft?.closedBy) || historyPerson(row, 'Manager'), at: draft?.closedAt, duration: draft?.stageSeconds?.Manager, sections: draft?.finalSections || [], detail: row.total ? `Total time ${row.total}` : '' });
+    } else if (row.status === 'Deleted') {
+      events.push({ kind: 'deleted', title: 'Draft deleted', person: fullPersonName(draft?.closedBy), at: draft?.closedAt, detail: 'Removed from the active drafts list' });
+    } else {
+      events.push({ kind: 'submitted', title: row.status, detail: '' });
+    }
+    return events;
+  };
+
+  const openHistoryDetail = (row) => {
+    setHistoryHover(null);
+    const stages = row.draft ? getDraftStages(row.draft) : stageOrder.filter((stage) => stage !== 'Review 3' || cleanName(row.review3));
+    setReopenStage(stages[stages.length - 1]);
+    setHistoryDetail(row);
+  };
+
+  const reopenFromHistory = (row, stage) => {
+    if (!canReopenHistory || !stage) return;
+    const base = row.draft || {
+      id: `reopened-${Date.now()}`,
+      title: row.title,
+      brand: row.brand,
+      documentType: row.type,
+      copywriter: cleanName(row.copywriter) || 'Unassigned',
+      reviewerOne: cleanName(row.review1) || 'Unassigned',
+      reviewerTwo: cleanName(row.review2) || 'Unassigned',
+      reviewerThree: cleanName(row.review3),
+      manager: cleanName(row.manager) || 'Unassigned',
+      priority: 'Normal',
+      typeTone: 'purple',
+      statusTone: 'green',
+      stageSeconds: {},
+      versions: [],
+      content: row.content || '',
+    };
+    const { closedAt, closedBy, finalSections, ...rest } = base;
+    const reopened = {
+      ...rest,
+      status: stage,
+      type: stage,
+      currentStage: stage,
+      stageStartedAt: Date.now(),
+      startedAt: rest.startedAt || Date.now(),
+      updated: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      ...(stage === 'Review 3' ? { reviewTwoReview: { ...rest.reviewTwoReview, extraReview: true } } : {}),
+      activity: [...(rest.activity || []), { kind: 'reopened', by: currentUser?.name, at: Date.now(), stage, from: row.status, versionCount: (rest.versions || []).length }],
+    };
+    setDrafts((current) => [reopened, ...current.filter((draft) => draft.id !== reopened.id)]);
+    setHistoryRows((current) => current.filter((item) => item !== row));
+    setHistoryDetail(null);
+    setActiveNav('Templates');
+    navigateToDraft(reopened);
+  };
+
+  const renderHistoryRow = (row, index) => {
+    const statusClass = row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral';
+    return (
+      <tr
+        key={`${row.title}-${index}`}
+        className="history-row-clickable"
+        tabIndex={0}
+        onClick={() => openHistoryDetail(row)}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openHistoryDetail(row); } }}
+        onMouseEnter={(event) => setHistoryHover({ row, x: event.clientX, y: event.clientY })}
+        onMouseMove={(event) => setHistoryHover((current) => (current?.row === row ? { row, x: event.clientX, y: event.clientY } : current))}
+        onMouseLeave={() => setHistoryHover(null)}
+      >
+        <td>{row.date}</td>
+        <td><span className="table-title">{row.title}</span></td>
+        <td><span className="pill brand-pill">{row.brand}</span></td>
+        <td><span className="pill type-pill">{row.type}</span></td>
+        <td>{row.copywriter || '—'}</td>
+        <td>{row.review1 || '—'}</td>
+        <td>{row.review2 || '—'}</td>
+        <td>{row.review3 || '—'}</td>
+        <td>{row.manager || '—'}</td>
+        <td><span className={`status-text ${statusClass}`}>
+          {row.status === 'Completed' ? <Check size={11} /> : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {row.status}
+        </span></td>
+        <td>{row.total ? <span className="total-time-cell"><Clock3 size={11} /> {row.total}</span> : '—'}</td>
+        <td>{row.errors === 'None'
+          ? <span className="errors-none"><Check size={12} /> None</span>
+          : <span className="errors-flag">{row.errors}</span>}</td>
+      </tr>
+    );
+  };
+
+  const renderHistoryHover = () => {
+    if (!historyHover || historyDetail) return null;
+    const { row, x, y } = historyHover;
+    const stages = stageOrder.map((stage) => [stage, historyPerson(row, stage)]).filter(([, person]) => person);
+    const versions = row.draft?.versions || [];
+    const sectionCount = new Set(versions.flatMap((version) => version.sections || []).concat(row.draft?.finalSections || [])).size;
+    const excerpt = (row.draft?.content || row.content || versions[versions.length - 1]?.content || '').replace(/\s+/g, ' ').trim();
+    const left = Math.min(x + 16, window.innerWidth - 336);
+    const top = y + 260 > window.innerHeight ? Math.max(12, y - 250) : y + 16;
+    return (
+      <div className="history-hover-card" style={{ left, top }} role="tooltip">
+        <div className="history-hover-head">
+          <strong>{row.title}</strong>
+          <span className={`status-text ${row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral'}`}>{row.status}</span>
+        </div>
+        <div className="history-hover-meta">{row.brand} · {row.type} · {row.date}</div>
+        <div className="history-hover-stages">
+          {stages.length ? stages.map(([stage, person]) => <span key={stage}><em>{stage}</em>{person}</span>) : <span><em>Stages</em>No one assigned</span>}
+        </div>
+        <div className="history-hover-stats">
+          <span><Clock3 size={12} /> {row.total && row.total !== '0' ? row.total : '—'}</span>
+          <span><ClipboardList size={12} /> {versions.length} version{versions.length === 1 ? '' : 's'}</span>
+          <span><CheckCircle2 size={12} /> {sectionCount} section{sectionCount === 1 ? '' : 's'}</span>
+          <span className={row.errors === 'None' ? '' : 'has-errors'}>{row.errors === 'None' ? 'No errors' : row.errors}</span>
+        </div>
+        {excerpt && <p className="history-hover-excerpt">{excerpt.length > 140 ? `${excerpt.slice(0, 140)}…` : excerpt}</p>}
+        <small>Click to see the full activity</small>
+      </div>
+    );
+  };
+
+  const renderHistoryDetail = () => {
+    if (!historyDetail) return null;
+    const row = historyDetail;
+    const events = buildHistoryTimeline(row);
+    const finalContent = row.draft?.content || row.content || '';
+    const stageChoices = row.draft ? getDraftStages(row.draft) : stageOrder.filter((stage) => stage !== 'Review 3' || cleanName(row.review3));
+    const statusClass = row.status === 'Completed' ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral';
+    return (
+      <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setHistoryDetail(null); }}>
+        <div className="history-detail" role="dialog" aria-modal="true" aria-labelledby="history-detail-title">
+          <button type="button" className="modal-close" onClick={() => setHistoryDetail(null)} aria-label="Close"><X size={17} /></button>
+          <div className="history-detail-head">
+            <span className="history-detail-readonly"><Lock size={12} /> Read only</span>
+            <h2 id="history-detail-title">{row.title}</h2>
+            <div className="history-detail-meta">
+              <span className={`status-text ${statusClass}`}>{row.status}</span>
+              <span className="pill brand-pill">{row.brand}</span>
+              <span className="pill type-pill">{row.type}</span>
+              <span><Clock3 size={12} /> {row.total && row.total !== '0' ? row.total : 'No time logged'}</span>
+              <span>Finished {row.date}</span>
+            </div>
+          </div>
+
+          <div className="history-detail-body">
+            <section>
+              <h3>Activity</h3>
+              <ol className="history-timeline">
+                {events.map((event, index) => (
+                  <li key={index} className={`history-event ${event.kind}`}>
+                    <span className="history-event-dot" />
+                    <div>
+                      <div className="history-event-title">
+                        <strong>{event.title}</strong>
+                        {event.at && <time>{formatHistoryTime(event.at)}</time>}
+                      </div>
+                      <div className="history-event-sub">
+                        {event.person && <span><UserRound size={12} /> {event.person}</span>}
+                        {Number(event.duration) > 0 && <span><Clock3 size={12} /> {formatChipDuration(event.duration)}</span>}
+                        {event.detail && <span>{event.detail}</span>}
+                      </div>
+                      {event.sections?.length > 0 && <div className="history-event-sections">{event.sections.map((section) => <span key={section}>{section}</span>)}</div>}
+                      {event.content && (
+                        <details className="history-event-content">
+                          <summary>View this version</summary>
+                          <div>{event.content}</div>
+                        </details>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section>
+              <h3>Final content</h3>
+              <div className="history-detail-content">{finalContent || 'No content was saved for this draft.'}</div>
+              <h3>Errors reported</h3>
+              <div>{row.errors === 'None' ? <span className="errors-none"><Check size={12} /> None</span> : <span className="errors-flag">{row.errors}</span>}</div>
+            </section>
+          </div>
+
+          <div className="history-detail-footer">
+            {canReopenHistory ? (
+              <>
+                <div className="history-reopen">
+                  <strong><RotateCcw size={14} /> Change status</strong>
+                  <span>Reopen this draft and send it back to a stage. It will leave History and show in the active drafts again.</span>
+                </div>
+                <div className="history-reopen-actions">
+                  <CustomSelect value={reopenStage} options={stageChoices} onChange={(event) => setReopenStage(event.target.value)} allowClear={false} align="left" ariaLabel="Stage to reopen at" placeholder="Choose stage" />
+                  <button type="button" className="button primary history-reopen-button" disabled={!reopenStage} onClick={() => reopenFromHistory(row, reopenStage)}><RotateCcw size={14} /> Reopen draft</button>
+                </div>
+              </>
+            ) : (
+              <span className="history-detail-note"><Lock size={13} /> This draft is closed. Only a manager can reopen it.</span>
+            )}
           </div>
         </div>
       </div>
@@ -2621,26 +2868,7 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {historyRows.map((row, index) => (
-                <tr key={`${row.title}-${index}`}>
-                  <td>{row.date}</td>
-                  <td><span className="table-title">{row.title}</span></td>
-                  <td><span className="pill brand-pill">{row.brand}</span></td>
-                  <td><span className="pill type-pill">{row.type}</span></td>
-                  <td>{row.copywriter || '—'}</td>
-                  <td>{row.review1 || '—'}</td>
-                  <td>{row.review2 || '—'}</td>
-                  <td>{row.review3 || '—'}</td>
-                  <td>{row.manager || '—'}</td>
-                  <td><span className={`status-text ${row.status === 'Completed' ? 'completed' : 'deleted'}`}>
-                    {row.status === 'Completed' ? <Check size={11} /> : <X size={11} />} {row.status}
-                  </span></td>
-                  <td>{row.total ? <span className="total-time-cell"><Clock3 size={11} /> {row.total}</span> : '—'}</td>
-                  <td>{row.errors === 'None'
-                    ? <span className="errors-none"><Check size={12} /> None</span>
-                    : <span className="errors-flag">{row.errors}</span>}</td>
-                </tr>
-              ))}
+              {historyRows.map(renderHistoryRow)}
             </tbody>
           </table>
         </div>
@@ -2841,31 +3069,12 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {historyRows.map((row, index) => (
-              <tr key={`${row.title}-${index}`}>
-                <td>{row.date}</td>
-                <td><span className="table-title">{row.title}</span></td>
-                <td><span className="pill brand-pill">{row.brand}</span></td>
-                <td><span className="pill type-pill">{row.type}</span></td>
-                <td>{row.copywriter}</td>
-                <td>{row.review1}</td>
-                <td>{row.review2}</td>
-                <td>{row.review3}</td>
-                <td>{row.manager}</td>
-                <td><span className={`status-text ${row.status === 'Completed' ? 'completed' : 'deleted'}`}>
-                  {row.status === 'Completed' ? <Check size={11} /> : <X size={11} />} {row.status}
-                </span></td>
-                <td>{row.total ? <span className="total-time-cell"><Clock3 size={11} /> {row.total}</span> : '—'}</td>
-                <td>{row.errors === 'None'
-                  ? <span className="errors-none"><Check size={12} /> None</span>
-                  : <span className="errors-flag">{row.errors}</span>}</td>
-              </tr>
-            ))}
+            {historyRows.map(renderHistoryRow)}
           </tbody>
         </table>
       </div>
 
-      <div className="table-footer-note">Tip: right-click any row to change its status — Completed drafts can be flooded to Deleted, and Deleted drafts can be restored back to Completed. Nothing is ever lost.</div>
+      <div className="table-footer-note">Tip: hover any row for a quick summary, or click it to see every action on that draft. Managers can reopen a completed or deleted draft from there.</div>
     </div>
   );
 
@@ -3113,6 +3322,8 @@ function App() {
         </main>
       )}
       {renderLockPrompt()}
+      {renderHistoryHover()}
+      {renderHistoryDetail()}
       <CalendarReminders currentUser={currentUser} />
       <footer><span>© 2026 Comms Hub</span><span>Designed by Rami Nassralla</span></footer>
     </div>
