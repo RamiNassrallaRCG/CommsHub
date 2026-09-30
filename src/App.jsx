@@ -928,7 +928,7 @@ function DatePickerField({ label, icon: Icon, value, onChange, placeholder = 'An
 function SectionHeader({ number, icon: Icon, title, description }) {
   return (
     <div className="section-header">
-      <div className="eyebrow"><Icon size={16} /> <span>SECTION {number}</span></div>
+      <div className="eyebrow"><Icon size={16} /> <span>Section {number}</span></div>
       <h2>{title}</h2>
       <p>{description}</p>
     </div>
@@ -1359,7 +1359,7 @@ function App() {
               </div>
 
               <div className="login-hero-copy">
-                <p className="intro-label">QUALITY ASSURANCE WORKSPACE</p>
+                <p className="intro-label">Quality assurance workspace</p>
                 <h1>Review and approve guest-facing communications with confidence.</h1>
                 <p>
                   A centralized workspace for copywriters, reviewers, and managers to manage
@@ -1410,7 +1410,7 @@ function App() {
               </div>
 
               <div className="login-copy">
-                <p className="intro-label">AUTHORIZED ACCESS ONLY</p>
+                <p className="intro-label">Authorized access only</p>
                 <h2>Welcome back</h2>
                 <p>{isEntraConfigured ? 'Sign in with your company Microsoft account to continue to communication quality reviews.' : 'Use your work email to continue to communication quality reviews.'}</p>
               </div>
@@ -2009,7 +2009,7 @@ function App() {
 
         <div className="workspace-heading">
           <div>
-            <span className="editorial-label">DRAFT</span>
+            <span className="editorial-label">Draft</span>
             <h1>{selectedDraft.title}</h1>
             <div className="workspace-meta">
               <span className="meta-chip"><Building2 size={12} /> {selectedDraft.brand}</span>
@@ -2336,7 +2336,7 @@ function App() {
     <div className="template-page">
       <div className="template-header-row">
         <div>
-          <div className="editorial-label">EDITORIAL WORKFLOW</div>
+          <div className="editorial-label">Editorial workflow</div>
           <h1>Email drafts</h1>
         </div>
         <div className="template-actions">
@@ -2780,7 +2780,7 @@ function App() {
         <div className="history-title-wrap">
           <div className="history-history-icon"><ClipboardList size={16} /></div>
           <div>
-            <div className="editorial-label">HISTORY</div>
+            <div className="editorial-label">History</div>
             <h1>Finished</h1>
           </div>
         </div>
@@ -3028,7 +3028,7 @@ function App() {
       ) : (
         <main>
           <div className="page-intro">
-            <span className="intro-label">NEW ENTRY</span>
+            <span className="intro-label">New entry</span>
             <h1>Log a communication</h1>
             <p>Record the brand, document, error type, and full review chain for reporting.</p>
           </div>

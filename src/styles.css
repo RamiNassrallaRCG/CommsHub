@@ -298,7 +298,7 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: none; }
 .login-proof-grid span {
   color: rgba(255, 255, 255, 0.68);
   font-size: 11px;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.08em;
 }
 .login-proof-grid strong {
@@ -343,7 +343,7 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: none; }
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .login-company-footer p {
   margin: 0;
@@ -454,7 +454,7 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: none; }
   gap: 12px;
   color: var(--text-muted);
   font-size: 12px;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.08em;
 }
 .login-divider::before, .login-divider::after {
@@ -936,7 +936,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
 .tiny-label {
   display: inline-block;
   font-size: 11px;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: .06em;
   color: #7d8ca5;
 }
@@ -1173,7 +1173,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .1em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .date-picker-button strong {
   grid-area: value;
@@ -1355,7 +1355,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .1em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .multi-filter-button strong {
   grid-area: value;
@@ -1535,7 +1535,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
   color: #597090;
   font-size: 11px;
   letter-spacing: .12em;
-  text-transform: uppercase;
+  text-transform: none;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2963,7 +2963,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
 .review-two-ribbon select:nth-child(2) { width: 44px; }
 .review-two-ribbon-bottom { gap: 12px; overflow-x: auto; padding-bottom: 15px; }
 .review-two-ribbon-group { position: relative; display: flex; gap: 2px; flex-shrink: 0; align-items: center; }
-.review-two-ribbon-group > span { position: absolute; bottom: -11px; left: 0; color: #7185a1; font-size: 8px; text-transform: uppercase; letter-spacing: .05em; }
+.review-two-ribbon-group > span { position: absolute; bottom: -11px; left: 0; color: #7185a1; font-size: 8px; text-transform: none; letter-spacing: .05em; }
 .review-two-approval { margin-top: 12px; padding: 18px 16px 14px; border: 1px solid #dce6f2; border-radius: 10px; background: #fff; }
 .review-two-approval .workspace-section-title { align-items: flex-start; }
 .review-two-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
@@ -3200,7 +3200,7 @@ body.split-view-locked { overflow: hidden; }
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .04em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .split-pane-tabs button:hover { color: #4f46e5; }
 .split-pane-tabs button.active {
@@ -3324,7 +3324,7 @@ body.split-view-locked { overflow: hidden; }
   color: #7185a1;
   font-size: 8px;
   letter-spacing: .06em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .email-editor-body {
   min-height: 300px;
@@ -3496,7 +3496,7 @@ body.split-view-locked { overflow: hidden; }
   padding: 6px 8px 8px;
   font-size: 10.5px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: .05em;
   color: #7286a2;
 }
@@ -3765,7 +3765,7 @@ body.split-view-locked { overflow: hidden; }
   color: #7185a1;
   font-size: 8px;
   letter-spacing: .06em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .notes-editor-toolbar select {
   height: 28px;
@@ -3910,7 +3910,7 @@ body.split-view-locked { overflow: hidden; }
 .sections-worked-toggle { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 0; background: transparent; color: #45628c; text-align: left; cursor: pointer; }
 .sections-worked-toggle:hover { background: #f8faff; }
 .sections-worked-toggle > svg:nth-child(2) { color: #5149df; }
-.sections-worked-toggle strong { color: #2c4466; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.sections-worked-toggle strong { color: #2c4466; font-size: 11.5px; font-weight: 700; letter-spacing: 0; text-transform: none; white-space: nowrap; }
 .sections-worked-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 8px; }
 .sections-worked-toggle small { margin-left: auto; color: #7b8fad; font-size: 11px; white-space: nowrap; }
 .sections-chip { padding: 2px 9px; border: 1px solid; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -3923,8 +3923,8 @@ body.split-view-locked { overflow: hidden; }
 .sections-matrix-scroll { overflow-x: auto; }
 .sections-matrix { width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed; font-size: 12.5px; }
 .sections-matrix thead th { padding: 9px 12px; border-bottom: 1px solid #dbe4f1; text-align: left; font-weight: 500; vertical-align: bottom; }
-.sections-matrix thead th:first-child { width: 22%; background: #f6f8fc; color: #5f7596; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.sections-matrix thead th span { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.sections-matrix thead th:first-child { width: 22%; background: #f6f8fc; color: #5f7596; font-size: 10.5px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.sections-matrix thead th span { display: flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 0; text-transform: none; opacity: .85; }
 .sections-matrix thead th strong { display: block; margin-top: 3px; font-size: 13.5px; font-weight: 700; }
 .sections-matrix thead th:not(:first-child), .sections-matrix td { border-left: 1px solid #e4eaf3; }
 .sections-matrix tbody th { padding: 8px 12px; color: #1e3a5f; font-weight: 600; text-align: left; }
