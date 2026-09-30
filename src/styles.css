@@ -4049,3 +4049,5 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 }
 .history-detail > .modal-close { position: absolute; top: 14px; right: 14px; left: auto; z-index: 2; }
 .history-reopen-button { white-space: nowrap; }
+
+.history-reopen-actions .custom-select-menu { top: auto; bottom: calc(100% + 8px); z-index: 40; }
