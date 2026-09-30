@@ -1041,6 +1041,7 @@ function App() {
   const [historyCompareMode, setHistoryCompareMode] = useState('inline');
   const [finalCopied, setFinalCopied] = useState(false);
   const [sentAttachmentError, setSentAttachmentError] = useState('');
+  const [exportingExcel, setExportingExcel] = useState(false);
   const [onlineSearch, setOnlineSearch] = useState('');
   const onlinePanelRef = useRef(null);
   useEffect(() => {
@@ -2121,6 +2122,215 @@ function App() {
         </div>
       </div>
     );
+  };
+
+  const exportHistoryExcel = async () => {
+    if (exportingExcel) return;
+    setExportingExcel(true);
+    try {
+      const { default: ExcelJS } = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = currentUser?.name || 'Comms Hub';
+      workbook.created = new Date();
+      const toDate = (value) => {
+        const time = typeof value === 'string' ? Date.parse(value) : Number(value);
+        if (!time || Number.isNaN(time)) return null;
+        return new Date(time - new Date(time).getTimezoneOffset() * 60000);
+      };
+      const minutes = (seconds) => (Number(seconds) > 0 ? Math.round((Number(seconds) / 60) * 10) / 10 : null);
+      const navy = 'FF1F3864';
+
+      const styleSheet = (sheet) => {
+        const header = sheet.getRow(1);
+        header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: navy } };
+        header.alignment = { vertical: 'middle', wrapText: true };
+        header.height = 30;
+        sheet.views = [{ state: 'frozen', ySplit: 1 }];
+        sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columnCount } };
+        sheet.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          row.alignment = { vertical: 'top', wrapText: true };
+          if (rowNumber % 2 === 0) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF4F6FB' } };
+        });
+      };
+
+      const summary = workbook.addWorksheet('Drafts');
+      summary.columns = [
+        { header: 'Finished', key: 'finished', width: 20, style: { numFmt: 'mmm d, yyyy h:mm AM/PM' } },
+        { header: 'Title', key: 'title', width: 44 },
+        { header: 'Brand', key: 'brand', width: 18 },
+        { header: 'Type', key: 'type', width: 16 },
+        { header: 'Status', key: 'status', width: 14 },
+        { header: 'Priority', key: 'priority', width: 10 },
+        { header: 'Due date', key: 'due', width: 13, style: { numFmt: 'mmm d, yyyy' } },
+        { header: 'Started', key: 'started', width: 20, style: { numFmt: 'mmm d, yyyy h:mm AM/PM' } },
+        { header: 'Copywriter', key: 'copywriter', width: 18 },
+        { header: 'Review 1', key: 'review1', width: 18 },
+        { header: 'Review 2', key: 'review2', width: 18 },
+        { header: 'Review 3', key: 'review3', width: 18 },
+        { header: 'Manager', key: 'manager', width: 18 },
+        { header: 'Closed by', key: 'closedBy', width: 18 },
+        { header: 'Copywriter (min)', key: 'tCopy', width: 11 },
+        { header: 'Review 1 (min)', key: 'tR1', width: 11 },
+        { header: 'Review 2 (min)', key: 'tR2', width: 11 },
+        { header: 'Review 3 (min)', key: 'tR3', width: 11 },
+        { header: 'Manager (min)', key: 'tMgr', width: 11 },
+        { header: 'Total time', key: 'total', width: 12 },
+        { header: 'Total (min)', key: 'totalMin', width: 11 },
+        { header: 'Versions', key: 'versions', width: 9 },
+        { header: 'Words added', key: 'added', width: 10 },
+        { header: 'Words removed', key: 'removed', width: 10 },
+        { header: 'Errors reported', key: 'errors', width: 20 },
+        { header: 'Review 2 change type', key: 'changeType', width: 16 },
+        { header: 'Review 2 error type', key: 'errorType', width: 20 },
+        { header: 'Review 2 notes', key: 'reviewNotes', width: 36 },
+        { header: 'Sent to guests', key: 'sent', width: 12 },
+        { header: 'Sent by', key: 'sentBy', width: 18 },
+        { header: 'Sent at', key: 'sentAt', width: 20, style: { numFmt: 'mmm d, yyyy h:mm AM/PM' } },
+        { header: 'Sent email attachments', key: 'attachments', width: 30 },
+        { header: 'Reference brief', key: 'brief', width: 40 },
+        { header: 'Final content', key: 'content', width: 70 },
+      ];
+
+      const stagesSheet = workbook.addWorksheet('Stage details');
+      stagesSheet.columns = [
+        { header: 'Title', key: 'title', width: 40 },
+        { header: 'Status', key: 'status', width: 14 },
+        { header: 'Stage', key: 'stage', width: 12 },
+        { header: 'Person', key: 'person', width: 20 },
+        { header: 'Submitted', key: 'at', width: 20, style: { numFmt: 'mmm d, yyyy h:mm AM/PM' } },
+        { header: 'Time spent (min)', key: 'minutes', width: 12 },
+        { header: 'Words', key: 'words', width: 9 },
+        { header: 'Words added', key: 'added', width: 10 },
+        { header: 'Words removed', key: 'removed', width: 10 },
+        { header: 'Sections worked on', key: 'sections', width: 36 },
+        { header: 'Added words', key: 'addedText', width: 40 },
+        { header: 'Removed words', key: 'removedText', width: 40 },
+        { header: 'Content at this stage', key: 'content', width: 70 },
+      ];
+
+      const activitySheet = workbook.addWorksheet('Activity log');
+      activitySheet.columns = [
+        { header: 'Title', key: 'title', width: 40 },
+        { header: 'When', key: 'at', width: 20, style: { numFmt: 'mmm d, yyyy h:mm AM/PM' } },
+        { header: 'Event', key: 'event', width: 30 },
+        { header: 'Person', key: 'person', width: 20 },
+        { header: 'Time spent (min)', key: 'minutes', width: 12 },
+        { header: 'Details', key: 'detail', width: 44 },
+        { header: 'Sections', key: 'sections', width: 36 },
+      ];
+
+      historyRows.forEach((row) => {
+        const draft = row.draft;
+        const snapshots = buildStageSnapshots(row);
+        const review = snapshots.find((item) => item.review)?.review;
+        const secs = (stage) => draft?.stageSeconds?.[stage];
+        const totalSeconds = Object.values(draft?.stageSeconds || {}).reduce((sum, value) => sum + (Number(value) || 0), 0);
+        summary.addRow({
+          finished: toDate(draft?.closedAt) || toDate(row.date) || row.date,
+          title: row.title,
+          brand: draft?.brand || row.brand,
+          type: draft?.documentType || row.type,
+          status: getHistoryStatusLabel(row),
+          priority: draft?.priority || '',
+          due: draft?.dueDate ? toDate(`${draft.dueDate}T00:00:00`) : null,
+          started: toDate(draft?.startedAt),
+          copywriter: historyPerson(row, 'Copywriter'),
+          review1: historyPerson(row, 'Review 1'),
+          review2: historyPerson(row, 'Review 2'),
+          review3: historyPerson(row, 'Review 3'),
+          manager: historyPerson(row, 'Manager'),
+          closedBy: fullPersonName(draft?.closedBy),
+          tCopy: minutes(secs('Copywriter')),
+          tR1: minutes(secs('Review 1')),
+          tR2: minutes(secs('Review 2')),
+          tR3: minutes(secs('Review 3')),
+          tMgr: minutes(secs('Manager')),
+          total: row.total && row.total !== '0' ? row.total : '',
+          totalMin: minutes(totalSeconds),
+          versions: snapshots.length || null,
+          added: snapshots.length > 1 ? snapshots.slice(1).reduce((sum, item) => sum + item.added, 0) : null,
+          removed: snapshots.length > 1 ? snapshots.slice(1).reduce((sum, item) => sum + item.removed, 0) : null,
+          errors: row.errors,
+          changeType: review?.changeType || '',
+          errorType: review?.errorType || '',
+          reviewNotes: review?.notes || '',
+          sent: row.status === 'Completed' ? (row.sentAt ? 'Yes' : 'No') : '',
+          sentBy: fullPersonName(row.sentBy),
+          sentAt: toDate(row.sentAt),
+          attachments: (row.sentAttachments || []).map((file) => file.name).join(', '),
+          brief: stripHtml(draft?.notes || ''),
+          content: getFinalDraftText(row),
+        });
+
+        snapshots.forEach((snapshot) => {
+          stagesSheet.addRow({
+            title: row.title,
+            status: getHistoryStatusLabel(row),
+            stage: snapshot.stage,
+            person: snapshot.person,
+            at: toDate(snapshot.at),
+            minutes: minutes(snapshot.seconds),
+            words: snapshot.words,
+            added: snapshot.previous ? snapshot.added : null,
+            removed: snapshot.previous ? snapshot.removed : null,
+            sections: (snapshot.sections || []).join(', '),
+            addedText: snapshot.previous ? snapshot.diff.filter((part) => part.type === 'added').map((part) => part.word).join(' ') : '',
+            removedText: snapshot.previous ? snapshot.diff.filter((part) => part.type === 'removed').map((part) => part.word).join(' ') : '',
+            content: snapshot.content,
+          });
+        });
+        if (!snapshots.length) {
+          stageOrder.forEach((stage) => {
+            const person = historyPerson(row, stage);
+            if (person) stagesSheet.addRow({ title: row.title, status: getHistoryStatusLabel(row), stage, person, minutes: minutes(secs(stage)) });
+          });
+        }
+
+        buildHistoryTimeline(row).forEach((event) => {
+          activitySheet.addRow({
+            title: row.title,
+            at: toDate(event.at),
+            event: event.title,
+            person: event.person || '',
+            minutes: minutes(event.duration),
+            detail: event.detail || '',
+            sections: (event.sections || []).join(', '),
+          });
+        });
+      });
+
+      [summary, stagesSheet, activitySheet].forEach(styleSheet);
+      summary.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const status = row.getCell('status');
+        const colors = { Sent: ['FFE0ECFF', 'FF1D4ED8'], 'Ready to send': ['FFFFF4D6', 'FF92580A'], Deleted: ['FFFBDADA', 'FFA12626'] }[status.value];
+        if (colors) {
+          status.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colors[0] } };
+          status.font = { bold: true, color: { argb: colors[1] } };
+        }
+        row.height = 32;
+      });
+      stagesSheet.eachRow((row, rowNumber) => { if (rowNumber > 1) row.height = 32; });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `Comms Hub history ${stamp}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error('Excel export failed', error);
+      window.alert('Sorry, the Excel export failed. Please try again.');
+    } finally {
+      setExportingExcel(false);
+    }
   };
 
   const openHistoryDetail = (row) => {
@@ -3293,7 +3503,7 @@ function App() {
             <span className="history-check-icon"><CheckCircle2 size={17} /></span>
             <h2>History <span className="history-badge">{historyRows.length}</span></h2>
           </div>
-          <button type="button" className="history-export-btn"><FileText size={14} /> Export Excel</button>
+          <button type="button" className="history-export-btn" onClick={exportHistoryExcel} disabled={exportingExcel || !historyRows.length}><FileText size={14} /> {exportingExcel ? 'Exporting…' : 'Export Excel'}</button>
         </div>
         <p className="history-panel-subtext">Every draft that was completed by the manager OR deleted from the top. Total time and all errors raised by any reviewer are shown per row.</p>
 
@@ -3517,7 +3727,7 @@ function App() {
             <h1>Finished</h1>
           </div>
         </div>
-        <button type="button" className="template-button primary history-export"><FileText size={14} /> Export Excel</button>
+        <button type="button" className="template-button primary history-export" onClick={exportHistoryExcel} disabled={exportingExcel || !historyRows.length}><FileText size={14} /> {exportingExcel ? 'Exporting…' : 'Export Excel'}</button>
       </div>
 
       <div className="history-subtext">Every draft that was completed by the manager is stored in the top log table and all errors raised by any reviewer are shown in the row.</div>

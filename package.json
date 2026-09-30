@@ -12,6 +12,7 @@
     "@azure/msal-browser": "^5.23.0",
     "@vitejs/plugin-react": "latest",
     "comms-hub": "file:",
+    "exceljs": "^4.4.0",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
