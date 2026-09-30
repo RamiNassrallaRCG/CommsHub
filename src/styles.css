@@ -4171,3 +4171,4 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 .coming-soon-action { margin-top: 8px; }
 .dark-theme .coming-soon-icon { background: #221f45; color: #b9b4ff; }
 .dark-theme .coming-soon-badge { background: #3a2d10; color: #f5c46b; }
+.history-table th { text-align: center; }

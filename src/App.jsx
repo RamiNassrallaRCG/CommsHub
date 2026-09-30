@@ -2382,7 +2382,7 @@ function App() {
   };
 
   const renderHistoryRow = (row, index) => {
-    const statusClass = getHistoryStatusClass(row);
+    const isCompleted = row.status === 'Completed';
     return (
       <tr
         key={`${row.title}-${index}`}
@@ -2403,9 +2403,14 @@ function App() {
         <td>{row.review2 || '—'}</td>
         <td>{row.review3 || '—'}</td>
         <td>{row.manager || '—'}</td>
-        <td><span className={`status-text ${statusClass}`}>
-          {row.status === 'Completed' ? (row.sentAt ? <MailCheck size={11} /> : <Check size={11} />) : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {getHistoryStatusLabel(row)}
+        <td><span className={`status-text ${isCompleted ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral'}`}>
+          {isCompleted ? <Check size={11} /> : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {row.status}
         </span></td>
+        <td className="history-sent-cell">{isCompleted
+          ? (row.sentAt
+            ? <span className="status-text sent" title={`Sent by ${fullPersonName(row.sentBy) || 'a team member'} · ${formatHistoryTime(row.sentAt)}`}><MailCheck size={11} /> Sent</span>
+            : <span className="status-text ready"><Mail size={11} /> Not sent</span>)
+          : '—'}</td>
         <td>{row.total ? <span className="total-time-cell"><Clock3 size={11} /> {row.total}</span> : '—'}</td>
         <td>{row.errors === 'None'
           ? <span className="errors-none"><Check size={12} /> None</span>
@@ -3521,6 +3526,7 @@ function App() {
                 <th>Review 3</th>
                 <th>Manager</th>
                 <th>Status</th>
+                <th>Sent to guest</th>
                 <th>Total time</th>
                 <th>All errors reported</th>
               </tr>
@@ -3746,6 +3752,7 @@ function App() {
               <th>Review 3</th>
               <th>Manager</th>
               <th>Status</th>
+              <th>Sent to guest</th>
               <th>Total time</th>
               <th>All errors reported</th>
             </tr>
