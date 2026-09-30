@@ -1567,7 +1567,7 @@ function App() {
   };
 
   const saveDraftContent = () => {
-    if (!selectedDraft || !['Copywriter', 'Review 1', 'Review 2', 'Review 3'].includes(getDraftStage(selectedDraft))) return;
+    if (!selectedDraft || !stageOrder.includes(getDraftStage(selectedDraft))) return;
     const field = getDraftStage(selectedDraft) === 'Review 2' ? 'reviewTwoContent'
       : getDraftStage(selectedDraft) === 'Review 3' ? 'reviewThreeContent' : 'content';
     const updatedDraft = { ...selectedDraft, [field]: draftContent };
@@ -1686,9 +1686,41 @@ function App() {
     setDraftSaved(false);
   };
 
+  const completeDraft = (sections = []) => {
+    const draft = selectedDraft;
+    const managerSeconds = Math.max(0, Math.floor((Date.now() - Number(draft.stageStartedAt || draft.startedAt)) / 1000));
+    const stageSeconds = { ...draft.stageSeconds, Manager: managerSeconds };
+    const totalSeconds = Object.values(stageSeconds).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    setDrafts((current) => current.filter((item) => item.id !== draft.id));
+    syncedDueDates.current.delete(draft.id);
+    queueCalendarSync(() => removeDraftDueDate(draft.id));
+    setHistoryRows((current) => [{
+      date: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }),
+      title: draft.title,
+      brand: draft.brand,
+      type: draft.documentType,
+      copywriter: draft.copywriter,
+      review1: draft.reviewerOne,
+      review2: draft.reviewerTwo,
+      review3: draft.reviewerThree || '—',
+      manager: draft.manager,
+      status: 'Completed',
+      total: formatChipDuration(totalSeconds),
+      errors: 'None',
+      content: draftContent,
+      sections,
+    }, ...current]);
+    setDraftSaved(false);
+    setSelectedDraft(null);
+  };
+
   const submitDraftContent = (sections = []) => {
     if (!draftContent.trim() || !selectedDraft) return;
     const stage = getDraftStage(selectedDraft);
+    if (stage === 'Manager') {
+      completeDraft(sections);
+      return;
+    }
     if (!['Copywriter', 'Review 1', 'Review 2', 'Review 3'].includes(stage)) return;
     const hasManager = selectedDraft.manager && selectedDraft.manager !== 'Unassigned';
     if (stage === 'Review 2' && (selectedDraft.reviewTwoReview?.extraReview ? !selectedDraft.reviewerThree : !hasManager)) return;
@@ -1766,8 +1798,8 @@ function App() {
       <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLockPrompt(null); }}>
         <div className="lock-modal" role="dialog" aria-modal="true" aria-labelledby="lock-modal-title">
           <button type="button" className="modal-close" onClick={() => setLockPrompt(null)} aria-label="Close"><X size={17} /></button>
-          <h2 id="lock-modal-title"><Lock size={19} /> Lock {stage}?</h2>
-          <p>Once submitted, this {stage} version cannot be edited, deleted, or overwritten — by anyone.</p>
+          <h2 id="lock-modal-title"><Lock size={19} /> {stage === 'Manager' ? 'Approve and complete this draft?' : `Lock ${stage}?`}</h2>
+          <p>{stage === 'Manager' ? 'This is the final approval. The draft will be marked completed and moved to History.' : `Once submitted, this ${stage} version cannot be edited, deleted, or overwritten — by anyone.`}</p>
           <div className="lock-modal-heading">
             <strong><ClipboardList size={15} /> Which sections did you draft or update? <b>*</b></strong>
             <span>
@@ -1795,7 +1827,7 @@ function App() {
           </div>
           <div className="lock-modal-actions">
             <button type="button" className="button secondary" onClick={() => setLockPrompt(null)}>Cancel</button>
-            <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> Yes, lock it</button>
+            <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> {stage === 'Manager' ? 'Yes, approve' : 'Yes, lock it'}</button>
           </div>
         </div>
       </div>
@@ -1827,7 +1859,8 @@ function App() {
   const renderDraftWorkspace = () => {
     if (!selectedDraft) return null;
     const currentStage = getDraftStage(selectedDraft);
-    const isLocked = !['Copywriter', 'Review 1', 'Review 2', 'Review 3'].includes(currentStage);
+    const isLocked = !stageOrder.includes(currentStage);
+    const isManagerStage = currentStage === 'Manager';
     const isFinalReview = currentStage === 'Review 2' || currentStage === 'Review 3';
     const priorReviewStage = currentStage === 'Review 3' ? 'Review 2' : 'Review 1';
     const lockedReviewContent = isFinalReview ? getLockedPriorContent(selectedDraft, priorReviewStage) : '';
@@ -2167,7 +2200,7 @@ function App() {
           </section>}
         <section className={`write-panel ${splitViewOpen ? 'split-view-active' : ''}`}>
           <div className="write-panel-header">
-            <div className="workspace-section-title"><PenLine size={15} /><div><strong>{currentStage === 'Copywriter' ? 'Write the original draft' : isFinalReview ? `${currentStage} editor` : `${currentStage} review`}</strong><span>{currentStage === 'Copywriter' ? `Write the original email. Submitting saves a read-only version and moves it to ${selectedDraft.reviewerOne}.` : currentStage === 'Review 1' ? `Edit the draft for ${stageOwner || 'the reviewer'}. Submitting saves a new version and moves it to ${selectedDraft.reviewerTwo || 'Review 2'}.` : isFinalReview ? 'Your own working copy. Format with the toolbar, then submit.' : `This draft is currently at the ${currentStage} step. The assigned owner is ${stageOwner || 'unassigned'}.`}</span></div></div>
+            <div className="workspace-section-title"><PenLine size={15} /><div><strong>{currentStage === 'Copywriter' ? 'Write the original draft' : isFinalReview ? `${currentStage} editor` : `${currentStage} review`}</strong><span>{currentStage === 'Copywriter' ? `Write the original email. Submitting saves a read-only version and moves it to ${selectedDraft.reviewerOne}.` : currentStage === 'Review 1' ? `Edit the draft for ${stageOwner || 'the reviewer'}. Submitting saves a new version and moves it to ${selectedDraft.reviewerTwo || 'Review 2'}.` : isFinalReview ? 'Your own working copy. Format with the toolbar, then submit.' : isManagerStage ? `Make any final edits, then approve to complete this draft and move it to History. Assigned to ${stageOwner || 'the manager'}.` : `This draft is currently at the ${currentStage} step. The assigned owner is ${stageOwner || 'unassigned'}.`}</span></div></div>
             {!isFinalReview && <button type="button" className="split-view-button" onClick={() => setSplitViewOpen(true)}><Columns2 size={14} /> Split view</button>}
           </div>
           <div className="draft-form-field draft-content-field">
@@ -2176,7 +2209,7 @@ function App() {
           </div>
           {(!isFinalReview || splitViewOpen) && <div className="content-footer">
             <span>{draftContent.trim().length} characters{showWordCount ? ` · ${draftContent.trim() ? draftContent.trim().split(/\s+/).length : 0} words` : ''}{draftSaved ? ' · Saved' : ''}</span>
-            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={requestLock}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : 'Submit & lock'}</button>}</div>
+            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={requestLock}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : isManagerStage ? 'Approve & complete' : 'Submit & lock'}</button>}</div>
           </div>}
         </section>
         </div>
