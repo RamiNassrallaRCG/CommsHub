@@ -4051,3 +4051,6 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 .history-reopen-button { white-space: nowrap; }
 
 .history-reopen-actions .custom-select-menu { top: auto; bottom: calc(100% + 8px); z-index: 40; }
+
+/* Current stage is locked to whoever opened it */
+.assignment-claimed { display: inline-flex; align-items: center; gap: 4px; align-self: center; padding: 3px 9px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; opacity: .85; cursor: default; }

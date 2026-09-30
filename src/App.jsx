@@ -191,6 +191,16 @@ const emptyNewDraftForm = {
 };
 
 const stageOrder = ['Copywriter', 'Review 1', 'Review 2', 'Review 3', 'Manager'];
+const stageAssigneeFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager' };
+const getDraftStage = (draft) => {
+  if (draft.currentStage) return draft.currentStage;
+  if (draft.type === 'Manager') return 'Manager';
+  if (draft.type === 'Review 2') return 'Review 2';
+  if (draft.type === 'Review 3') return 'Review 3';
+  if (draft.type === 'Review 1') return 'Review 1';
+  if (draft.type === 'Proofing') return 'Review 1';
+  return 'Copywriter';
+};
 const getDraftStages = (draft) => draft.reviewTwoReview?.extraReview || draft.currentStage === 'Review 3'
   || draft.versions?.some((version) => version.stage === 'Review 3')
   ? stageOrder : stageOrder.filter((stage) => stage !== 'Review 3');
@@ -1003,6 +1013,20 @@ function App() {
     document.addEventListener('keydown', handleKey);
     return () => { document.removeEventListener('mousedown', handlePointer); document.removeEventListener('keydown', handleKey); };
   }, [onlinePanelOpen]);
+
+  const selectedDraftStage = selectedDraft ? getDraftStage(selectedDraft) : '';
+  useEffect(() => {
+    if (!selectedDraft || !currentUser?.name) return;
+    const field = stageAssigneeFields[selectedDraftStage];
+    if (!field || selectedDraft[field] === currentUser.name) return;
+    const claimed = {
+      ...selectedDraft,
+      [field]: currentUser.name,
+      stageClaims: { ...selectedDraft.stageClaims, [selectedDraftStage]: { name: currentUser.name, at: Date.now(), previous: selectedDraft[field] || '' } },
+    };
+    setSelectedDraft(claimed);
+    setDrafts((current) => current.map((draft) => draft.id === claimed.id ? claimed : draft));
+  }, [selectedDraft?.id, selectedDraftStage, currentUser?.name]);
   const syncedDueDates = useRef(new Map());
   const calendarSyncQueue = useRef(Promise.resolve());
 
@@ -1644,20 +1668,10 @@ function App() {
     if (!selectedDraft) return;
     if (field === 'copywriter' && selectedDraft.copywriterLocked) return;
     const stageIndex = { copywriter: 0, reviewerOne: 1, reviewerTwo: 2, reviewerThree: 3 }[field];
-    if (stageIndex === undefined || stageIndex < getDraftStages(selectedDraft).indexOf(getDraftStage(selectedDraft))) return;
+    if (stageIndex === undefined || stageIndex <= getDraftStages(selectedDraft).indexOf(getDraftStage(selectedDraft))) return;
     const updatedDraft = { ...selectedDraft, [field]: event.target.value };
     setSelectedDraft(updatedDraft);
     setDrafts((current) => current.map((draft) => draft.id === updatedDraft.id ? updatedDraft : draft));
-  };
-
-  const getDraftStage = (draft) => {
-    if (draft.currentStage) return draft.currentStage;
-    if (draft.type === 'Manager') return 'Manager';
-    if (draft.type === 'Review 2') return 'Review 2';
-    if (draft.type === 'Review 3') return 'Review 3';
-    if (draft.type === 'Review 1') return 'Review 1';
-    if (draft.type === 'Proofing') return 'Review 1';
-    return 'Copywriter';
   };
 
   const getDraftDocumentType = (draft) => draft.documentType || draft.templateType || draft.category || 'General communication';
@@ -2318,7 +2332,7 @@ function App() {
                 || accessList.find((entry) => entry.name.split(' ')[0] === name);
               const isActive = index === currentStageIndex;
               const isDone = index < currentStageIndex;
-              const canChange = stage !== 'Manager' && !isDone && (field !== 'copywriter' || !selectedDraft.copywriterLocked);
+              const canChange = stage !== 'Manager' && !isDone && !isActive && (field !== 'copywriter' || !selectedDraft.copywriterLocked);
               const duration = isActive ? activeStageSeconds : selectedDraft.stageSeconds?.[stage] || 0;
               return (
                 <div key={stage} className={`assignment-card ${className}`}>
@@ -2328,7 +2342,7 @@ function App() {
                     <strong>{!name || name === 'Unassigned' ? 'To be assigned' : name}</strong>
                     {person && <span className="assignment-job-title">{person.title}</span>}
                   </div>
-                  {stage !== 'Manager' && <CustomSelect
+                  {stage !== 'Manager' && !isActive && <CustomSelect
                     value={name}
                     onChange={updateAssignment(field)}
                     options={people}
@@ -2339,8 +2353,9 @@ function App() {
                     triggerLabel="Change"
                     showDetails
                     optionDetails={accessList}
-                    disabledReason={field === 'copywriter' && selectedDraft.copywriterLocked ? 'The creator is locked as copywriter.' : 'Completed assignments cannot be changed.'}
+                    disabledReason={isActive ? `${name} opened this ${stage} step, so it is locked to them.` : field === 'copywriter' && selectedDraft.copywriterLocked ? 'The creator is locked as copywriter.' : 'Completed assignments cannot be changed.'}
                   />}
+                  {isActive && <span className="assignment-claimed" title={`${name} opened this ${stage} step, so it is locked to them and can't be reassigned.`}><Lock size={11} /> {name === currentUser?.name ? 'You' : 'Locked'}</span>}
                   <div className="assignment-timing">
                     <span>{isActive ? 'Running' : isDone ? 'Done' : 'Pending'}</span>
                     <strong>{isActive || isDone ? formatChipDuration(duration) : '—'}</strong>
@@ -2464,7 +2479,7 @@ function App() {
         {currentStage === 'Review 2' && <section className="review-two-approval" aria-label="Review 2 approval">
           <div className="workspace-section-title"><PenLine size={15} /><div><strong>What did you change?</strong><span>Categorize the change and approve when you're done. Notes are optional.</span></div></div>
           <div className="review-two-fields">
-            <div className="review-two-field"><span>Reviewer <b>*</b></span><CustomSelect value={selectedDraft.reviewerTwo || ''} options={people} onChange={updateAssignment('reviewerTwo')} allowClear={false} align="left" ariaLabel="Reviewer" /></div>
+            <div className="review-two-field"><span>Reviewer <b>*</b></span><CustomSelect value={selectedDraft.reviewerTwo || ''} options={people} onChange={updateAssignment('reviewerTwo')} allowClear={false} align="left" ariaLabel="Reviewer" disabled disabledReason="Locked to the person who opened Review 2" /></div>
             <div className="review-two-field"><span>Change type <b>*</b></span><CustomSelect value={reviewTwoReview.changeType || 'Content'} options={['Content', 'Formatting', 'Grammar', 'Approval', 'No changes']} onChange={updateReviewTwoField('changeType')} allowClear={false} align="left" ariaLabel="Change type" /></div>
             <div className="review-two-field"><span>Error type</span><CustomSelect value={reviewTwoReview.errorType || 'None'} options={['None', ...errorTypes]} onChange={updateReviewTwoField('errorType')} allowClear={false} align="left" ariaLabel="Error type" /></div>
           </div>
