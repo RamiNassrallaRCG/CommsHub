@@ -1667,8 +1667,10 @@ function App() {
   const updateAssignment = (field) => (event) => {
     if (!selectedDraft) return;
     if (field === 'copywriter' && selectedDraft.copywriterLocked) return;
-    const stageIndex = { copywriter: 0, reviewerOne: 1, reviewerTwo: 2, reviewerThree: 3 }[field];
-    if (stageIndex === undefined || stageIndex <= getDraftStages(selectedDraft).indexOf(getDraftStage(selectedDraft))) return;
+    const stages = getDraftStages(selectedDraft);
+    const fieldStage = Object.keys(stageAssigneeFields).find((stage) => stageAssigneeFields[stage] === field);
+    const stageIndex = stages.indexOf(fieldStage);
+    if (stageIndex < 0 || stageIndex <= stages.indexOf(getDraftStage(selectedDraft))) return;
     const updatedDraft = { ...selectedDraft, [field]: event.target.value };
     setSelectedDraft(updatedDraft);
     setDrafts((current) => current.map((draft) => draft.id === updatedDraft.id ? updatedDraft : draft));
@@ -2321,7 +2323,7 @@ function App() {
           <div className="assignment-heading">
             <div className="assignment-heading-copy">
               <span><UsersRound size={15} /> Assignments &amp; timing</span>
-              <span className="assignment-helper">Manager is chosen after the final review stage is approved</span>
+              <span className="assignment-helper">Upcoming stages, including Manager, can be reassigned until they start</span>
             </div>
             <div className="assignment-total"><Clock3 size={14} /> Total <span><Clock3 size={14} /> Live so far: <strong>{formatTotalElapsed(totalStageSeconds)}</strong></span></div>
           </div>
@@ -2332,7 +2334,7 @@ function App() {
                 || accessList.find((entry) => entry.name.split(' ')[0] === name);
               const isActive = index === currentStageIndex;
               const isDone = index < currentStageIndex;
-              const canChange = stage !== 'Manager' && !isDone && !isActive && (field !== 'copywriter' || !selectedDraft.copywriterLocked);
+              const canChange = !isDone && !isActive && (field !== 'copywriter' || !selectedDraft.copywriterLocked);
               const duration = isActive ? activeStageSeconds : selectedDraft.stageSeconds?.[stage] || 0;
               return (
                 <div key={stage} className={`assignment-card ${className}`}>
@@ -2342,7 +2344,7 @@ function App() {
                     <strong>{!name || name === 'Unassigned' ? 'To be assigned' : name}</strong>
                     {person && <span className="assignment-job-title">{person.title}</span>}
                   </div>
-                  {stage !== 'Manager' && !isActive && <CustomSelect
+                  {!isActive && <CustomSelect
                     value={name}
                     onChange={updateAssignment(field)}
                     options={people}
