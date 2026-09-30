@@ -3444,6 +3444,30 @@ function App() {
   );
   };
 
+  const comingSoonPages = {
+    History: 'A full history log with filters, search and Excel export. Until it is ready, use the History table at the bottom of the Templates page.',
+    Dashboard: 'Team dashboards with volumes, turnaround times, error trends and workload by person.',
+    'My Stats': 'Your personal stats: drafts you worked on, time per stage, errors caught and your recent activity.',
+  };
+
+  const renderComingSoon = (page) => {
+    const Icon = navIcons[page] || Sparkles;
+    return (
+      <main className="coming-soon-page">
+        <div className="coming-soon-card">
+          <span className="coming-soon-icon"><Icon size={26} /></span>
+          <span className="coming-soon-badge"><Hourglass size={12} /> In progress</span>
+          <h1>{page} is coming soon</h1>
+          <p>This page isn&apos;t available yet. We&apos;re still building it and it will be ready soon.</p>
+          <p className="coming-soon-detail">{comingSoonPages[page]}</p>
+          {allowedPages.includes('Templates') && (
+            <button type="button" className="final-btn primary coming-soon-action" onClick={() => setActiveNav('Templates')}><FileText size={14} /> Go to templates</button>
+          )}
+        </div>
+      </main>
+    );
+  };
+
   const renderHistoryPage = () => (
     <div className="history-page">
       <div className="history-header-row">
@@ -3672,7 +3696,7 @@ function App() {
 
       {!allowedPages.includes(activeNav) || (selectedDraft && !allowedPages.includes('Templates')) ? (
         <main className="admin-page"><div className="admin-empty">You don&apos;t have access to this page. Contact the administrator.</div></main>
-      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'History' ? renderHistoryPage() : activeNav === 'Team Calendar' ? (
+      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : comingSoonPages[activeNav] ? renderComingSoon(activeNav) : activeNav === 'Team Calendar' ? (
         <TeamCalendar currentUser={currentUser} team={accessList.filter((person) => person.status === 'Allowed')} drafts={drafts} Select={CustomSelect} onOpenDraft={(draftId) => { const draft = drafts.find((item) => item.id === draftId); if (draft) navigateToDraft(draft); }} />
       ) : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
         <main className="admin-page"><div className="admin-empty">{activeNav} is coming soon.</div></main>

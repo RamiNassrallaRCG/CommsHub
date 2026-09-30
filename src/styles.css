@@ -4157,3 +4157,15 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 .final-btn.primary { margin-left: 0; }
 .dark-theme .status-text.ready { background: #3a2d10; color: #f5c46b; }
 .final-btn svg { flex-shrink: 0; }
+
+/* Coming soon pages */
+.coming-soon-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 180px); padding: 32px 16px; }
+.coming-soon-card { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(560px, 100%); padding: 40px 36px; border: 1px solid var(--panel-border); border-radius: 18px; background: var(--surface-strong); box-shadow: 0 12px 32px rgba(15, 23, 42, .08); text-align: center; }
+.coming-soon-icon { display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 16px; background: linear-gradient(135deg, #eef0ff, #e3e8ff); color: #4f46e5; }
+.coming-soon-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: #fff4d6; color: #92580a; font-size: 12px; font-weight: 700; }
+.coming-soon-card h1 { margin: 4px 0 0; color: var(--text); font-size: 24px; }
+.coming-soon-card p { margin: 0; color: var(--text-muted); font-size: 14px; line-height: 1.55; }
+.coming-soon-card .coming-soon-detail { padding: 10px 14px; border-radius: 10px; background: var(--surface); font-size: 13px; }
+.coming-soon-action { margin-top: 8px; }
+.dark-theme .coming-soon-icon { background: #221f45; color: #b9b4ff; }
+.dark-theme .coming-soon-badge { background: #3a2d10; color: #f5c46b; }
