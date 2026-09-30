@@ -989,6 +989,17 @@ function App() {
   const [priorityMenu, setPriorityMenu] = useState(null);
   const [lockPrompt, setLockPrompt] = useState(null);
   const [sectionsPanelOpen, setSectionsPanelOpen] = useState(false);
+  const [onlinePanelOpen, setOnlinePanelOpen] = useState(false);
+  const [onlineSearch, setOnlineSearch] = useState('');
+  const onlinePanelRef = useRef(null);
+  useEffect(() => {
+    if (!onlinePanelOpen) { setOnlineSearch(''); return undefined; }
+    const handlePointer = (event) => { if (onlinePanelRef.current && !onlinePanelRef.current.contains(event.target)) setOnlinePanelOpen(false); };
+    const handleKey = (event) => { if (event.key === 'Escape') setOnlinePanelOpen(false); };
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => { document.removeEventListener('mousedown', handlePointer); document.removeEventListener('keydown', handleKey); };
+  }, [onlinePanelOpen]);
   const syncedDueDates = useRef(new Map());
   const calendarSyncQueue = useRef(Promise.resolve());
 
@@ -2925,7 +2936,8 @@ function App() {
           ))}
         </nav>
         <div className="profile-area">
-          <div className="online-presence" aria-label={`${onlineUsers.length + extraOnlineCount} users online, ${activeOnlineCount} active`}>
+          <div className="online-presence-wrap" ref={onlinePanelRef}>
+          <button type="button" className={`online-presence${onlinePanelOpen ? ' open' : ''}`} aria-haspopup="dialog" aria-expanded={onlinePanelOpen} aria-label={`${onlineUsers.length + extraOnlineCount} users online, ${activeOnlineCount} active. Show who is online`} onClick={() => setOnlinePanelOpen((open) => !open)}>
             <div className="online-copy">
               <strong>Online now</strong>
               <span>{activeOnlineCount} active · {awayOnlineCount} away</span>
@@ -2945,6 +2957,52 @@ function App() {
               })}
               {extraOnlineCount > 0 && <div className="online-avatar more" title={`${extraOnlineCount} more online`}>+{extraOnlineCount}</div>}
             </div>
+          </button>
+          {onlinePanelOpen && (() => {
+            const term = onlineSearch.trim().toLowerCase();
+            const people = allOnlinePeople
+              .map((person) => ({ ...person, presence: getPresenceStatus(person, currentUser) }))
+              .filter((person) => !term || `${person.name} ${person.title || ''} ${person.email}`.toLowerCase().includes(term));
+            const groups = [
+              ['active', 'Active now', people.filter((person) => person.presence === 'active')],
+              ['away', 'Away', people.filter((person) => person.presence !== 'active')],
+            ];
+            return (
+              <div className="online-panel" role="dialog" aria-label="Who is online">
+                <div className="online-panel-head">
+                  <div>
+                    <strong>Who's online</strong>
+                    <span>{allOnlinePeople.length} people · {activeOnlineCount} active · {awayOnlineCount} away</span>
+                  </div>
+                  <button type="button" className="online-panel-close" onClick={() => setOnlinePanelOpen(false)} aria-label="Close"><X size={14} /></button>
+                </div>
+                <label className="online-panel-search">
+                  <Search size={13} />
+                  <input autoFocus value={onlineSearch} onChange={(event) => setOnlineSearch(event.target.value)} placeholder="Search people" aria-label="Search people online" />
+                </label>
+                <div className="online-panel-list">
+                  {people.length === 0 && <p className="online-panel-empty">No one matches “{onlineSearch}”.</p>}
+                  {groups.map(([key, label, members]) => members.length > 0 && (
+                    <div key={key} className="online-panel-group">
+                      <h4><i className={`presence-dot ${key}`} />{label} <em>{members.length}</em></h4>
+                      {members.map((person) => (
+                        <div key={person.email} className="online-panel-person" title={person.email}>
+                          <div className={`online-avatar presence-${person.presence}`}>
+                            {person.profilePhoto ? <img src={person.profilePhoto} alt="" /> : <span>{getInitials(person.name)}</span>}
+                          </div>
+                          <div className="online-panel-info">
+                            <strong>{person.name}{person.email === currentUser?.email && <small> (you)</small>}</strong>
+                            <span>{person.title || 'Team member'}</span>
+                          </div>
+                          <span className={`online-panel-status ${person.presence}`}>{person.presence === 'active' ? 'Active' : 'Away'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           </div>
           <div className="profile" title={currentUser?.title}>
             <div className="profile-identity">
