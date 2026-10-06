@@ -4051,7 +4051,7 @@ function App() {
               return <Fragment key={person.email}><tr className={isExpanded ? 'admin-row-expanded' : undefined}>
                 <td><button type="button" className="admin-name-toggle" aria-expanded={isExpanded} aria-controls={`pages-${person.email}`} onClick={() => setExpandedAccessEmail(isExpanded ? null : person.email)}>{isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}<strong>{person.name}</strong></button></td>
                 <td>{person.email}</td>
-                <td>{isOwner ? person.title : <input className="admin-title-input" aria-label={`Title for ${person.email}`} value={person.title} onChange={(event) => updateAccessUser(person.email, { title: event.target.value })} placeholder="Job title" />}</td>
+                <td>{person.title || '—'}</td>
                 <td>{isOwner ? <span className="admin-owner-badge">Administrator</span> : <select aria-label={`View type for ${person.email}`} value={person.view} onChange={(event) => updateAccessUser(person.email, { view: event.target.value })}><option value="User">User</option><option value="Manager">Manager</option></select>}</td>
                 <td><span className="admin-page-count">{isOwner ? 'All pages' : `${personPages.length} of ${rolePages.length}`}</span></td>
                 <td>{isOwner ? <span className="admin-status allowed">Allowed</span> : <button type="button" className={`admin-status ${person.status.toLowerCase()}`} onClick={() => updateAccessUser(person.email, { status: person.status === 'Allowed' ? 'Denied' : 'Allowed' })} aria-label={`${person.status === 'Allowed' ? 'Deny' : 'Allow'} ${person.email}`}>{person.status === 'Allowed' ? 'Allowed · Deny' : 'Denied · Allow'}</button>}</td>
