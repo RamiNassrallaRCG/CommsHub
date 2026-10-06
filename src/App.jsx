@@ -194,10 +194,13 @@ const emptyNewDraftForm = {
   screenshots: [],
 };
 
-const stageOrder = ['Copywriter', 'Review 1', 'Review 2', 'Review 3', 'Manager'];
-const stageAssigneeFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager' };
+const stageOrder = ['Copywriter', 'Review 1', 'Review 2', 'Review 3', 'Manager', 'Final'];
+const stageAssigneeFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager', Final: 'finalOwner' };
+// The Final step defaults to the copywriter until someone reassigns it.
+const getFinalOwner = (draft) => (draft.finalOwner && draft.finalOwner !== 'Unassigned' ? draft.finalOwner : draft.copywriter);
 const getDraftStage = (draft) => {
   if (draft.currentStage) return draft.currentStage;
+  if (draft.type === 'Final') return 'Final';
   if (draft.type === 'Manager') return 'Manager';
   if (draft.type === 'Review 2') return 'Review 2';
   if (draft.type === 'Review 3') return 'Review 3';
@@ -297,6 +300,7 @@ const getRoleForStage = (draft, stage) => {
     case 'Review 2': return draft.reviewerTwo;
     case 'Review 3': return draft.reviewerThree;
     case 'Manager': return draft.manager;
+    case 'Final': return getFinalOwner(draft);
     default: return 'Unassigned';
   }
 };
@@ -1759,7 +1763,7 @@ function App() {
   const openDraft = (draft) => {
     const stage = getDraftStage(draft);
     const startedAt = Number(draft.startedAt) || Date.now();
-    const openedDraft = { ...draft, startedAt, currentStage: stage };
+    const openedDraft = { ...draft, startedAt, currentStage: stage, finalOwner: getFinalOwner(draft) };
     navigateToDraft(openedDraft);
     setDrafts((current) => current.map((item) => item.id === openedDraft.id ? openedDraft : item));
     setElapsedSeconds(Math.max(0, Math.floor((Date.now() - Number(openedDraft.stageStartedAt || startedAt)) / 1000)));
@@ -1786,8 +1790,8 @@ function App() {
 
   const completeDraft = (sections = []) => {
     const draft = selectedDraft;
-    const managerSeconds = Math.max(0, Math.floor((Date.now() - Number(draft.stageStartedAt || draft.startedAt)) / 1000));
-    const stageSeconds = { ...draft.stageSeconds, Manager: (Number(draft.stageSeconds?.Manager) || 0) + managerSeconds };
+    const finalSeconds = Math.max(0, Math.floor((Date.now() - Number(draft.stageStartedAt || draft.startedAt)) / 1000));
+    const stageSeconds = { ...draft.stageSeconds, Final: (Number(draft.stageSeconds?.Final) || 0) + finalSeconds };
     const totalSeconds = Object.values(stageSeconds).reduce((sum, value) => sum + (Number(value) || 0), 0);
     setDrafts((current) => current.filter((item) => item.id !== draft.id));
     syncedDueDates.current.delete(draft.id);
@@ -1802,6 +1806,7 @@ function App() {
       review2: draft.reviewerTwo,
       review3: draft.reviewerThree || '—',
       manager: draft.manager,
+      final: getFinalOwner(draft),
       status: 'Completed',
       total: formatChipDuration(totalSeconds),
       errors: 'None',
@@ -1818,16 +1823,17 @@ function App() {
   const submitDraftContent = (sections = []) => {
     if (!draftContent.trim() || !selectedDraft) return;
     const stage = getDraftStage(selectedDraft);
-    if (stage === 'Manager') {
+    if (stage === 'Final') {
       completeDraft(sections);
       return;
     }
-    if (!['Copywriter', 'Review 1', 'Review 2', 'Review 3'].includes(stage)) return;
+    if (!['Copywriter', 'Review 1', 'Review 2', 'Review 3', 'Manager'].includes(stage)) return;
     const hasManager = selectedDraft.manager && selectedDraft.manager !== 'Unassigned';
     if (stage === 'Review 2' && (selectedDraft.reviewTwoReview?.extraReview ? !selectedDraft.reviewerThree : !hasManager)) return;
     if (stage === 'Review 3' && !hasManager) return;
     const nextStage = stage === 'Copywriter' ? 'Review 1' : stage === 'Review 1' ? 'Review 2'
-      : stage === 'Review 2' && selectedDraft.reviewTwoReview?.extraReview ? 'Review 3' : 'Manager';
+      : stage === 'Review 2' && selectedDraft.reviewTwoReview?.extraReview ? 'Review 3'
+        : stage === 'Manager' ? 'Final' : 'Manager';
     const stageSeconds = Math.max(0, Math.floor((Date.now() - Number(selectedDraft.stageStartedAt || selectedDraft.startedAt)) / 1000));
     const lockedDraft = {
       ...selectedDraft,
@@ -1864,6 +1870,7 @@ function App() {
       review2: lockedDraft.reviewerTwo,
       review3: lockedDraft.reviewerThree || '—',
       manager: lockedDraft.manager,
+      final: getFinalOwner(lockedDraft),
       status: 'Submitted',
       total: formatChipDuration(stageSeconds),
       errors: 'None',
@@ -1899,8 +1906,8 @@ function App() {
       <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLockPrompt(null); }}>
         <div className="lock-modal" role="dialog" aria-modal="true" aria-labelledby="lock-modal-title">
           <button type="button" className="modal-close" onClick={() => setLockPrompt(null)} aria-label="Close"><X size={17} /></button>
-          <h2 id="lock-modal-title"><Lock size={19} /> {stage === 'Manager' ? 'Approve and complete this draft?' : `Lock ${stage}?`}</h2>
-          <p>{stage === 'Manager' ? 'This is the final approval. The draft will be marked completed and moved to History.' : `Once submitted, this ${stage} version cannot be edited, deleted, or overwritten — by anyone.`}</p>
+          <h2 id="lock-modal-title"><Lock size={19} /> {stage === 'Final' ? 'Mark as final and complete this draft?' : stage === 'Manager' ? 'Approve and send to Final?' : `Lock ${stage}?`}</h2>
+          <p>{stage === 'Final' ? 'This is the last step. The draft will be marked completed and moved to History.' : stage === 'Manager' ? `Your approved version will be locked and sent to ${getFinalOwner(selectedDraft) || 'the Final owner'} for the Final step.` : `Once submitted, this ${stage} version cannot be edited, deleted, or overwritten — by anyone.`}</p>
           <div className="lock-modal-heading">
             <strong><ClipboardList size={15} /> Which sections did you draft or update? <b>*</b></strong>
             <span>
@@ -1928,7 +1935,7 @@ function App() {
           </div>
           <div className="lock-modal-actions">
             <button type="button" className="button secondary" onClick={() => setLockPrompt(null)}>Cancel</button>
-            <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> {stage === 'Manager' ? 'Yes, approve' : 'Yes, lock it'}</button>
+            <button type="button" className={`button primary lock-confirm${ready ? ' is-ready' : ''}`} onClick={confirmLock} aria-disabled={!ready}><Check size={14} /> {stage === 'Final' ? 'Yes, complete' : stage === 'Manager' ? 'Yes, approve' : 'Yes, lock it'}</button>
           </div>
         </div>
       </div>
@@ -1936,8 +1943,10 @@ function App() {
   };
 
   const canReopenHistory = currentUser?.view === 'Manager' || currentUser?.email === ADMIN_EMAIL;
-  const historyStageFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager' };
-  const historyRowFields = { Copywriter: 'copywriter', 'Review 1': 'review1', 'Review 2': 'review2', 'Review 3': 'review3', Manager: 'manager' };
+  const historyStageFields = { Copywriter: 'copywriter', 'Review 1': 'reviewerOne', 'Review 2': 'reviewerTwo', 'Review 3': 'reviewerThree', Manager: 'manager', Final: 'finalOwner' };
+  const historyRowFields = { Copywriter: 'copywriter', 'Review 1': 'review1', 'Review 2': 'review2', 'Review 3': 'review3', Manager: 'manager', Final: 'final' };
+  // Drafts completed before the Final step existed were closed at Manager.
+  const getClosingStage = (draft) => (draft && (draft.finalOwner || draft.stageSeconds?.Final != null || (draft.versions || []).some((version) => version.stage === 'Manager')) ? 'Final' : 'Manager');
   const cleanName = (name) => (name && name !== '—' && name !== 'Unassigned' ? name : '');
   const fullPersonName = (name) => {
     const clean = cleanName(name);
@@ -1954,7 +1963,7 @@ function App() {
       events.push({ kind: 'created', title: 'Draft created', person: fullPersonName(draft.copywriter), detail: `Assigned to ${fullPersonName(draft.copywriter) || 'the copywriter'} as copywriter` });
       const versions = draft.versions || [];
       const reopenings = draft.activity || [];
-      stageOrder.filter((stage) => stage !== 'Manager' && Number(draft.stageSeconds?.[stage]) > 0 && !versions.some((version) => version.stage === stage))
+      stageOrder.filter((stage) => stage !== getClosingStage(draft) && Number(draft.stageSeconds?.[stage]) > 0 && !versions.some((version) => version.stage === stage))
         .forEach((stage) => events.push({ kind: 'submitted', title: `${stage} completed`, person: fullPersonName(draft[historyStageFields[stage]]), duration: draft.stageSeconds[stage] }));
       versions.forEach((version, index) => {
         reopenings.filter((entry) => entry.versionCount === index).forEach((entry) => events.push({ kind: 'reopened', title: `Reopened at ${entry.stage}`, person: entry.by, at: entry.at, detail: `Status changed from ${entry.from} back to ${entry.stage}` }));
@@ -1978,7 +1987,8 @@ function App() {
       });
     }
     if (row.status === 'Completed') {
-      events.push({ kind: 'completed', title: 'Approved and completed', person: fullPersonName(draft?.closedBy) || historyPerson(row, 'Manager'), at: draft?.closedAt, duration: draft?.stageSeconds?.Manager, sections: draft?.finalSections || [], detail: row.total ? `Total time ${row.total}` : '' });
+      const closingStage = getClosingStage(draft);
+      events.push({ kind: 'completed', title: closingStage === 'Final' ? 'Final completed' : 'Approved and completed', person: fullPersonName(draft?.closedBy) || historyPerson(row, closingStage), at: draft?.closedAt, duration: draft?.stageSeconds?.[closingStage], sections: draft?.finalSections || [], detail: row.total ? `Total time ${row.total}` : '' });
       if (row.sentAt) events.push({ kind: 'completed', title: 'Marked as sent to guests', person: fullPersonName(row.sentBy), at: row.sentAt, detail: row.sentAttachments?.length ? `${row.sentAttachments.length} sent email file${row.sentAttachments.length === 1 ? '' : 's'} attached` : '' });
     } else if (row.status === 'Deleted') {
       events.push({ kind: 'deleted', title: 'Draft deleted', person: fullPersonName(draft?.closedBy), at: draft?.closedAt, detail: 'Removed from the active drafts list' });
@@ -2170,12 +2180,14 @@ function App() {
         { header: 'Review 2', key: 'review2', width: 18 },
         { header: 'Review 3', key: 'review3', width: 18 },
         { header: 'Manager', key: 'manager', width: 18 },
+        { header: 'Final', key: 'final', width: 18 },
         { header: 'Closed by', key: 'closedBy', width: 18 },
         { header: 'Copywriter (min)', key: 'tCopy', width: 11 },
         { header: 'Review 1 (min)', key: 'tR1', width: 11 },
         { header: 'Review 2 (min)', key: 'tR2', width: 11 },
         { header: 'Review 3 (min)', key: 'tR3', width: 11 },
         { header: 'Manager (min)', key: 'tMgr', width: 11 },
+        { header: 'Final (min)', key: 'tFinal', width: 11 },
         { header: 'Total time', key: 'total', width: 12 },
         { header: 'Total (min)', key: 'totalMin', width: 11 },
         { header: 'Versions', key: 'versions', width: 9 },
@@ -2241,12 +2253,14 @@ function App() {
           review2: historyPerson(row, 'Review 2'),
           review3: historyPerson(row, 'Review 3'),
           manager: historyPerson(row, 'Manager'),
+          final: historyPerson(row, 'Final'),
           closedBy: fullPersonName(draft?.closedBy),
           tCopy: minutes(secs('Copywriter')),
           tR1: minutes(secs('Review 1')),
           tR2: minutes(secs('Review 2')),
           tR3: minutes(secs('Review 3')),
           tMgr: minutes(secs('Manager')),
+          tFinal: minutes(secs('Final')),
           total: row.total && row.total !== '0' ? row.total : '',
           totalMin: minutes(totalSeconds),
           versions: snapshots.length || null,
@@ -2355,6 +2369,7 @@ function App() {
       reviewerTwo: cleanName(row.review2) || 'Unassigned',
       reviewerThree: cleanName(row.review3),
       manager: cleanName(row.manager) || 'Unassigned',
+      finalOwner: cleanName(row.final),
       priority: 'Normal',
       typeTone: 'purple',
       statusTone: 'green',
@@ -2403,6 +2418,7 @@ function App() {
         <td>{row.review2 || '—'}</td>
         <td>{row.review3 || '—'}</td>
         <td>{row.manager || '—'}</td>
+        <td>{row.final || historyPerson(row, 'Final') || '—'}</td>
         <td><span className={`status-text ${isCompleted ? 'completed' : row.status === 'Deleted' ? 'deleted' : 'neutral'}`}>
           {isCompleted ? <Check size={11} /> : row.status === 'Deleted' ? <X size={11} /> : <Clock3 size={11} />} {row.status}
         </span></td>
@@ -2463,13 +2479,14 @@ function App() {
       seconds: draft.stageSeconds?.[version.stage],
     }));
     if (row.status === 'Completed') {
+      const closingStage = getClosingStage(draft);
       snapshots.push({
-        stage: 'Manager',
-        person: fullPersonName(draft.closedBy) || fullPersonName(draft.manager),
+        stage: closingStage,
+        person: fullPersonName(draft.closedBy) || fullPersonName(draft[historyStageFields[closingStage]]),
         at: draft.closedAt,
         content: draft.content || row.content || '',
         sections: draft.finalSections || [],
-        seconds: draft.stageSeconds?.Manager,
+        seconds: draft.stageSeconds?.[closingStage],
         final: true,
       });
     }
@@ -2770,6 +2787,7 @@ function App() {
     const currentStage = getDraftStage(selectedDraft);
     const isLocked = !stageOrder.includes(currentStage);
     const isManagerStage = currentStage === 'Manager';
+    const isFinalStage = currentStage === 'Final';
     const isFinalReview = currentStage === 'Review 2' || currentStage === 'Review 3';
     const priorReviewStage = currentStage === 'Review 3' ? 'Review 2' : 'Review 1';
     const lockedReviewContent = isFinalReview ? getLockedPriorContent(selectedDraft, priorReviewStage) : '';
@@ -2788,6 +2806,7 @@ function App() {
       { stage: 'Review 2', field: 'reviewerTwo', className: 'review-assignment review-two-assignment' },
       ...(draftStages.includes('Review 3') ? [{ stage: 'Review 3', field: 'reviewerThree', className: 'review-assignment review-three-assignment' }] : []),
       { stage: 'Manager', field: 'manager', className: 'manager-assignment' },
+      { stage: 'Final', field: 'finalOwner', className: 'final-assignment' },
     ];
     const stageOwner = currentStage === 'Copywriter'
       ? selectedDraft.copywriter
@@ -2797,6 +2816,8 @@ function App() {
           ? selectedDraft.reviewerTwo
           : currentStage === 'Review 3'
             ? selectedDraft.reviewerThree
+          : isFinalStage
+            ? getFinalOwner(selectedDraft)
           : selectedDraft.manager;
 
     const referenceNotesMarkup = (
@@ -3083,7 +3104,7 @@ function App() {
 
         <div className="workflow-steps">
           {draftStages.map((stage, index) => {
-            const who = { Copywriter: selectedDraft.copywriter, 'Review 1': selectedDraft.reviewerOne, 'Review 2': selectedDraft.reviewerTwo, 'Review 3': selectedDraft.reviewerThree, Manager: selectedManager }[stage];
+            const who = { Copywriter: selectedDraft.copywriter, 'Review 1': selectedDraft.reviewerOne, 'Review 2': selectedDraft.reviewerTwo, 'Review 3': selectedDraft.reviewerThree, Manager: selectedManager, Final: getFinalOwner(selectedDraft) }[stage];
             const status = index < currentStageIndex ? 'done' : index === currentStageIndex ? 'active' : '';
             const marker = status === 'done' ? '✓' : status === 'active' ? '✎' : '→';
             return <span key={stage} className={status} aria-current={status === 'active' ? 'step' : undefined}>{marker} {stage} · {who || (stage === 'Manager' ? 'TBD' : 'Unassigned')}</span>;
@@ -3110,7 +3131,7 @@ function App() {
           </section>}
         <section className={`write-panel ${splitViewOpen ? 'split-view-active' : ''}`}>
           <div className="write-panel-header">
-            <div className="workspace-section-title"><PenLine size={15} /><div><strong>{currentStage === 'Copywriter' ? 'Write the original draft' : isFinalReview ? `${currentStage} editor` : `${currentStage} review`}</strong><span>{currentStage === 'Copywriter' ? `Write the original email. Submitting saves a read-only version and moves it to ${selectedDraft.reviewerOne}.` : currentStage === 'Review 1' ? `Edit the draft for ${stageOwner || 'the reviewer'}. Submitting saves a new version and moves it to ${selectedDraft.reviewerTwo || 'Review 2'}.` : isFinalReview ? 'Your own working copy. Format with the toolbar, then submit.' : isManagerStage ? `Make any final edits, then approve to complete this draft and move it to History. Assigned to ${stageOwner || 'the manager'}.` : `This draft is currently at the ${currentStage} step. The assigned owner is ${stageOwner || 'unassigned'}.`}</span></div></div>
+            <div className="workspace-section-title"><PenLine size={15} /><div><strong>{currentStage === 'Copywriter' ? 'Write the original draft' : isFinalReview ? `${currentStage} editor` : `${currentStage} review`}</strong><span>{currentStage === 'Copywriter' ? `Write the original email. Submitting saves a read-only version and moves it to ${selectedDraft.reviewerOne}.` : currentStage === 'Review 1' ? `Edit the draft for ${stageOwner || 'the reviewer'}. Submitting saves a new version and moves it to ${selectedDraft.reviewerTwo || 'Review 2'}.` : isFinalReview ? 'Your own working copy. Format with the toolbar, then submit.' : isManagerStage ? `Make any edits, then approve to lock your version and send it to ${getFinalOwner(selectedDraft) || 'the Final owner'} for the Final step. Assigned to ${stageOwner || 'the manager'}.` : isFinalStage ? `Last check of the manager-approved version. Completing this step moves the draft to History. Assigned to ${stageOwner || 'the Final owner'}.` : `This draft is currently at the ${currentStage} step. The assigned owner is ${stageOwner || 'unassigned'}.`}</span></div></div>
             {!isFinalReview && <button type="button" className="split-view-button" onClick={() => setSplitViewOpen(true)}><Columns2 size={14} /> Split view</button>}
           </div>
           <div className="draft-form-field draft-content-field">
@@ -3119,7 +3140,7 @@ function App() {
           </div>
           {(!isFinalReview || splitViewOpen) && <div className="content-footer">
             <span>{draftContent.trim().length} characters{showWordCount ? ` · ${draftContent.trim() ? draftContent.trim().split(/\s+/).length : 0} words` : ''}{draftSaved ? ' · Saved' : ''}</span>
-            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={requestLock}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : isManagerStage ? 'Approve & complete' : 'Submit & lock'}</button>}</div>
+            <div><button type="button" className="button secondary" disabled={isLocked} onClick={saveDraftContent}><Save size={14} /> Save draft</button>{!isFinalReview && <button type="button" className="button primary" disabled={isLocked || !draftContent.trim()} onClick={requestLock}><Check size={14} /> {currentStage === 'Review 1' ? 'Submit to Review 2' : isManagerStage ? 'Approve & send to Final' : isFinalStage ? 'Mark final & complete' : 'Submit & lock'}</button>}</div>
           </div>}
         </section>
         </div>
@@ -3289,7 +3310,7 @@ function App() {
       </div>
 
       <div className="template-subtext">
-        Copywriter drafts <span>→</span> Review 1 <span>→</span> Review 2 <span>→</span> Optional review 3 <span>→</span> Manager approval. Every submitted stage is logged forever.
+        Copywriter drafts <span>→</span> Review 1 <span>→</span> Review 2 <span>→</span> Optional review 3 <span>→</span> Manager approval <span>→</span> Final. Every submitted stage is logged forever.
       </div>
 
       <div className="template-toolbar">
@@ -3401,7 +3422,8 @@ function App() {
           <>
       <div className="results-meta">Showing {firstDraft}-{lastDraft} of {sortedDrafts.length} drafts (max 6 per page)</div>
 
-      {visibleDrafts.length > 0 ? <div className="draft-grid">
+      <div className="draft-grid-area">
+      <div className="draft-grid draft-grid-fixed">
         {visibleDrafts.map((draft) => {
           const currentStage = getDraftStage(draft);
           const draftStages = getDraftStages(draft);
@@ -3480,14 +3502,28 @@ function App() {
             </article>
           );
         })}
-      </div> : (
-        <div className="empty-filter-state">
-          <Search size={22} />
-          <strong>No drafts match those filters</strong>
-          <span>Try clearing one dropdown or searching with a different word.</span>
-          <button type="button" className="toolbar-button" onClick={clearAllDraftFilters}>Clear filters</button>
-        </div>
+        {Array.from({ length: draftsPerPage - visibleDrafts.length }, (_, index) => (
+          <div key={`draft-slot-${index}`} className="draft-card-placeholder" aria-hidden="true" />
+        ))}
+      </div>
+
+      {visibleDrafts.length === 0 && (
+        drafts.length === 0 ? (
+          <div className="empty-filter-state draft-empty-overlay">
+            <CheckCircle2 size={26} />
+            <strong>No drafts outstanding</strong>
+            <span>You're all caught up. New drafts will appear here once they are logged.</span>
+          </div>
+        ) : (
+          <div className="empty-filter-state draft-empty-overlay">
+            <Search size={22} />
+            <strong>No drafts match those filters</strong>
+            <span>Try clearing one dropdown or searching with a different word.</span>
+            <button type="button" className="toolbar-button" onClick={clearAllDraftFilters}>Clear filters</button>
+          </div>
+        )
       )}
+      </div>
 
       {visibleDrafts.length > 0 && (
         <div className="pagination">
@@ -3525,6 +3561,7 @@ function App() {
                 <th>Review 2</th>
                 <th>Review 3</th>
                 <th>Manager</th>
+                <th>Final</th>
                 <th>Status</th>
                 <th>Sent to guest</th>
                 <th>Total time</th>
@@ -3702,7 +3739,6 @@ function App() {
   const comingSoonPages = {
     History: 'A full history log with filters, search and Excel export. Until it is ready, use the History table at the bottom of the Templates page.',
     Dashboard: 'Team dashboards with volumes, turnaround times, error trends and workload by person.',
-    'My Stats': 'Your personal stats: drafts you worked on, time per stage, errors caught and your recent activity.',
   };
 
   const renderComingSoon = (page) => {
@@ -3719,6 +3755,217 @@ function App() {
             <button type="button" className="final-btn primary coming-soon-action" onClick={() => setActiveNav('Templates')}><FileText size={14} /> Go to templates</button>
           )}
         </div>
+      </main>
+    );
+  };
+
+  // Everything on My Stats is derived from the signed-in user only. Names on
+  // drafts can be first names or full names, so both forms are matched.
+  const renderMyStatsPage = () => {
+    const me = currentUser;
+    if (!me) return null;
+    const myFirst = me.name.split(' ')[0];
+    const firstNameShared = accessList.some((person) => person.name !== me.name && person.name.split(' ')[0] === myFirst);
+    const isMe = (name) => {
+      const clean = cleanName(name);
+      if (!clean) return false;
+      return clean === me.name || (clean === myFirst && !firstNameShared);
+    };
+    const stageLabels = { Copywriter: 'Copywriter', 'Review 1': 'Review 1', 'Review 2': 'Review 2', 'Review 3': 'Review 3', Manager: 'Manager', Final: 'Final' };
+
+    const myRolesOnDraft = (draft, { closed = false } = {}) => getDraftStages(draft)
+      // Closed drafts only count Final if they actually went through it; older ones ended at Manager.
+      .filter((stage) => stage !== 'Final' || !closed || getClosingStage(draft) === 'Final')
+      .filter((stage) => isMe(getRoleForStage(draft, stage)));
+    const myRolesOnRow = (row) => (row.draft
+      ? myRolesOnDraft(row.draft, { closed: true })
+      : stageOrder.filter((stage) => isMe(row[historyRowFields[stage]])));
+
+    const activeMine = drafts
+      .map((draft) => {
+        const stages = getDraftStages(draft);
+        const current = getDraftStage(draft);
+        const roles = myRolesOnDraft(draft);
+        const myTurn = isMe(getRoleForStage(draft, current));
+        const currentIndex = stages.indexOf(current);
+        const doneByMe = roles.filter((stage) => stages.indexOf(stage) < currentIndex);
+        const upcoming = roles.filter((stage) => stages.indexOf(stage) > currentIndex);
+        const waitingSeconds = Math.max(0, (liveTick - Number(draft.stageStartedAt || draft.startedAt || liveTick)) / 1000);
+        return { draft, roles, myTurn, current, doneByMe, upcoming, waitingSeconds };
+      })
+      .filter((item) => item.roles.length)
+      .sort((a, b) => Number(b.myTurn) - Number(a.myTurn) || (priorityRank[a.draft.priority] ?? 2) - (priorityRank[b.draft.priority] ?? 2));
+
+    const pastMine = historyRows
+      .map((row) => ({ row, roles: myRolesOnRow(row) }))
+      .filter((item) => item.roles.length);
+    const completedMine = pastMine.filter((item) => item.row.status === 'Completed');
+
+    const secondsByStage = {};
+    let totalSeconds = 0;
+    let stageCount = 0;
+    const roleCounts = {};
+    [...activeMine.map((item) => ({ draft: item.draft, closed: false })), ...pastMine.filter((item) => item.row.draft).map((item) => ({ draft: item.row.draft, closed: true }))].forEach(({ draft, closed }) => {
+      myRolesOnDraft(draft, { closed }).forEach((stage) => {
+        roleCounts[stage] = (roleCounts[stage] || 0) + 1;
+        const secs = Number(draft.stageSeconds?.[stage]) || 0;
+        if (secs > 0) {
+          secondsByStage[stage] = (secondsByStage[stage] || 0) + secs;
+          totalSeconds += secs;
+          stageCount += 1;
+        }
+      });
+    });
+    pastMine.filter((item) => !item.row.draft).forEach((item) => item.roles.forEach((stage) => { roleCounts[stage] = (roleCounts[stage] || 0) + 1; }));
+    const avgStageSeconds = stageCount ? totalSeconds / stageCount : 0;
+
+    const errorsOnMyWork = completedMine.filter((item) => item.row.errors && item.row.errors !== 'None').length;
+    const cleanRate = completedMine.length ? Math.round(((completedMine.length - errorsOnMyWork) / completedMine.length) * 100) : null;
+    const sentMine = completedMine.filter((item) => item.row.sentAt).length;
+    const withDue = completedMine.filter((item) => item.row.draft?.dueDate && item.row.draft?.closedAt);
+    const onTime = withDue.filter((item) => item.row.draft.closedAt <= new Date(`${item.row.draft.dueDate}T23:59:59`).getTime()).length;
+    const onTimeRate = withDue.length ? Math.round((onTime / withDue.length) * 100) : null;
+    const myTurnCount = activeMine.filter((item) => item.myTurn).length;
+    const overdueMine = activeMine.filter((item) => item.myTurn && item.draft.dueDate && new Date(`${item.draft.dueDate}T23:59:59`).getTime() < liveTick).length;
+    const draftsCreated = [...activeMine, ...pastMine.map((item) => ({ draft: item.row.draft, row: item.row }))]
+      .filter((item) => isMe(item.draft?.copywriter || item.row?.copywriter)).length;
+    const maxRole = Math.max(1, ...Object.values(roleCounts));
+    const maxStageSeconds = Math.max(1, ...Object.values(secondsByStage));
+
+    const kpis = [
+      { label: 'Active assignments', value: activeMine.length, hint: `${myTurnCount} waiting on you`, icon: FileText, tone: 'indigo' },
+      { label: 'Waiting on you', value: myTurnCount, hint: overdueMine ? `${overdueMine} past due` : 'Nothing overdue', icon: Hourglass, tone: overdueMine ? 'rose' : 'amber' },
+      { label: 'Completed', value: completedMine.length, hint: `${sentMine} sent to guests`, icon: CheckCircle2, tone: 'green' },
+      { label: 'Time logged', value: totalSeconds ? formatTotalElapsed(totalSeconds) : '—', hint: avgStageSeconds ? `Avg ${formatChipDuration(avgStageSeconds)} per stage` : 'No stages timed yet', icon: Clock3, tone: 'blue' },
+      { label: 'Clean rate', value: cleanRate === null ? '—' : `${cleanRate}%`, hint: completedMine.length ? `${errorsOnMyWork} with errors flagged` : 'No completed drafts yet', icon: Shield, tone: 'teal' },
+      { label: 'On-time rate', value: onTimeRate === null ? '—' : `${onTimeRate}%`, hint: withDue.length ? `${onTime} of ${withDue.length} met the due date` : 'No due dates tracked', icon: CalendarDays, tone: 'purple' },
+    ];
+
+    const formatDue = (dueDate) => (dueDate ? new Date(`${dueDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—');
+    const stageClass = (stage) => `stage-${stage.replace(/\s+/g, '-').toLowerCase()}`;
+
+    return (
+      <main className="mystats-page">
+        <section className="mystats-hero">
+          <div className="mystats-identity">
+            <div className="mystats-avatar">{me.profilePhoto ? <img src={me.profilePhoto} alt="" /> : <span>{getInitials(me.name)}</span>}</div>
+            <div>
+              <span className="editorial-label">My stats</span>
+              <h1>{me.name}</h1>
+              <p>{me.title || 'Team member'} · {me.view || 'User'}{draftsCreated ? ` · ${draftsCreated} draft${draftsCreated === 1 ? '' : 's'} created` : ''}</p>
+            </div>
+          </div>
+          <div className="mystats-hero-note"><Lock size={12} /> Only you can see this page. It shows work assigned to you now and in the past.</div>
+        </section>
+
+        <section className="mystats-kpis">
+          {kpis.map(({ label, value, hint, icon: Icon, tone }) => (
+            <article key={label} className={`mystats-kpi tone-${tone}`}>
+              <span className="mystats-kpi-icon"><Icon size={16} /></span>
+              <span className="mystats-kpi-label">{label}</span>
+              <strong className="mystats-kpi-value">{value}</strong>
+              <small>{hint}</small>
+            </article>
+          ))}
+        </section>
+
+        <div className="mystats-columns">
+          <section className="mystats-card">
+            <div className="mystats-card-head"><div><h2>Your roles</h2><p>How often you are assigned to each step.</p></div></div>
+            {Object.keys(roleCounts).length ? (
+              <ul className="mystats-bars">
+                {stageOrder.filter((stage) => roleCounts[stage]).map((stage) => (
+                  <li key={stage}>
+                    <span className={`history-stage-chip ${stageClass(stage)}`}>{stageLabels[stage]}</span>
+                    <span className="mystats-bar"><i className={stageClass(stage)} style={{ width: `${Math.round((roleCounts[stage] / maxRole) * 100)}%` }} /></span>
+                    <strong>{roleCounts[stage]}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mystats-empty">You have not been assigned to any drafts yet.</p>}
+          </section>
+
+          <section className="mystats-card">
+            <div className="mystats-card-head"><div><h2>Time by stage</h2><p>Total time you have spent in each step.</p></div></div>
+            {Object.keys(secondsByStage).length ? (
+              <ul className="mystats-bars">
+                {stageOrder.filter((stage) => secondsByStage[stage]).map((stage) => (
+                  <li key={stage}>
+                    <span className={`history-stage-chip ${stageClass(stage)}`}>{stageLabels[stage]}</span>
+                    <span className="mystats-bar"><i className={stageClass(stage)} style={{ width: `${Math.round((secondsByStage[stage] / maxStageSeconds) * 100)}%` }} /></span>
+                    <strong>{formatChipDuration(secondsByStage[stage])}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mystats-empty">No timed stages yet. Time is recorded when you submit a step.</p>}
+          </section>
+        </div>
+
+        <section className="mystats-card">
+          <div className="mystats-card-head">
+            <div><h2>Assigned to you now</h2><p>Active drafts where you have a role. Items waiting on you are listed first.</p></div>
+            <span className="history-badge">{activeMine.length}</span>
+          </div>
+          {activeMine.length ? (
+            <div className="mystats-table-wrap">
+              <table className="mystats-table">
+                <thead><tr><th>Draft</th><th>Brand</th><th>Your role</th><th>Current step</th><th>Status</th><th>Due</th><th>Priority</th><th></th></tr></thead>
+                <tbody>
+                  {activeMine.map(({ draft, roles, myTurn, current, doneByMe, waitingSeconds }) => {
+                    const overdue = myTurn && draft.dueDate && new Date(`${draft.dueDate}T23:59:59`).getTime() < liveTick;
+                    return (
+                      <tr key={draft.id} className={myTurn ? 'is-my-turn' : ''} onClick={() => navigateToDraft(draft)} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigateToDraft(draft); } }}>
+                        <td><span className="table-title">{draft.title}</span><small>{getDraftDocumentType(draft)}</small></td>
+                        <td><span className="pill brand-pill">{draft.brand}</span></td>
+                        <td><div className="mystats-chips">{roles.map((stage) => <span key={stage} className={`history-stage-chip ${stageClass(stage)}${doneByMe.includes(stage) ? ' is-done' : ''}`}>{stageLabels[stage]}</span>)}</div></td>
+                        <td>{current}</td>
+                        <td>{myTurn
+                          ? <span className={`status-text ${overdue ? 'deleted' : 'ready'}`}><Hourglass size={11} /> Your turn · {formatChipDuration(waitingSeconds)}</span>
+                          : doneByMe.length && !roles.some((stage) => getDraftStages(draft).indexOf(stage) > getDraftStages(draft).indexOf(current))
+                            ? <span className="status-text completed"><Check size={11} /> Your part done</span>
+                            : <span className="status-text neutral"><Clock3 size={11} /> Waiting on {getRoleForStage(draft, current) || current}</span>}</td>
+                        <td className={overdue ? 'is-overdue' : ''}>{formatDue(draft.dueDate)}</td>
+                        <td>{draft.priority && draft.priority !== 'Normal' ? <span className={`priority-tag ${draft.priority.toLowerCase()}`}>{draft.priority}</span> : <span className="mystats-muted">Normal</span>}</td>
+                        <td><span className="open-link">Open <ChevronRight size={14} /></span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="mystats-empty">Nothing is assigned to you right now. You&apos;re all caught up.</p>}
+        </section>
+
+        <section className="mystats-card">
+          <div className="mystats-card-head">
+            <div><h2>Your past work</h2><p>Completed and closed drafts you took part in.</p></div>
+            <span className="history-badge">{pastMine.length}</span>
+          </div>
+          {pastMine.length ? (
+            <div className="mystats-table-wrap">
+              <table className="mystats-table">
+                <thead><tr><th>Finished</th><th>Draft</th><th>Brand</th><th>Your role</th><th>Your time</th><th>Total time</th><th>Errors</th><th>Status</th></tr></thead>
+                <tbody>
+                  {pastMine.map(({ row, roles }, index) => {
+                    const mySeconds = roles.reduce((sum, stage) => sum + (Number(row.draft?.stageSeconds?.[stage]) || 0), 0);
+                    return (
+                      <tr key={`${row.title}-${index}`} onClick={() => openHistoryDetail(row)} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openHistoryDetail(row); } }}>
+                        <td>{row.date}</td>
+                        <td><span className="table-title">{row.title}</span><small>{row.type}</small></td>
+                        <td><span className="pill brand-pill">{row.brand}</span></td>
+                        <td><div className="mystats-chips">{roles.map((stage) => <span key={stage} className={`history-stage-chip ${stageClass(stage)}`}>{stageLabels[stage]}</span>)}</div></td>
+                        <td>{mySeconds ? formatChipDuration(mySeconds) : '—'}</td>
+                        <td>{row.total && row.total !== '0' ? row.total : '—'}</td>
+                        <td>{row.errors === 'None' || !row.errors ? <span className="errors-none"><Check size={12} /> None</span> : <span className="errors-flag">{row.errors}</span>}</td>
+                        <td><span className={`status-text ${getHistoryStatusClass(row)}`}>{getHistoryStatusLabel(row)}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : <p className="mystats-empty">No past drafts yet. Completed work will show up here.</p>}
+        </section>
       </main>
     );
   };
@@ -3751,6 +3998,7 @@ function App() {
               <th>Review 2</th>
               <th>Review 3</th>
               <th>Manager</th>
+              <th>Final</th>
               <th>Status</th>
               <th>Sent to guest</th>
               <th>Total time</th>
@@ -3953,7 +4201,7 @@ function App() {
 
       {!allowedPages.includes(activeNav) || (selectedDraft && !allowedPages.includes('Templates')) ? (
         <main className="admin-page"><div className="admin-empty">You don&apos;t have access to this page. Contact the administrator.</div></main>
-      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : comingSoonPages[activeNav] ? renderComingSoon(activeNav) : activeNav === 'Team Calendar' ? (
+      ) : activeNav === 'Admin' && !selectedDraft ? renderAdminPage() : selectedDraft ? renderDraftWorkspace() : activeNav === 'Templates' ? renderTemplatePage() : activeNav === 'My Stats' ? renderMyStatsPage() : comingSoonPages[activeNav] ? renderComingSoon(activeNav) : activeNav === 'Team Calendar' ? (
         <TeamCalendar currentUser={currentUser} team={accessList.filter((person) => person.status === 'Allowed')} drafts={drafts} Select={CustomSelect} onOpenDraft={(draftId) => { const draft = drafts.find((item) => item.id === draftId); if (draft) navigateToDraft(draft); }} />
       ) : activeNav !== 'Log' && !allowedPages.includes('Log') ? (
         <main className="admin-page"><div className="admin-empty">{activeNav} is coming soon.</div></main>

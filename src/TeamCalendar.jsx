@@ -195,7 +195,9 @@ export default function TeamCalendar({ currentUser, team, drafts, Select, onOpen
   const provider = useMemo(() => getCalendarProvider(), []);
   const [view, setView] = useState(() => {
     const saved = localStorage.getItem(VIEW_KEY);
-    return VIEWS.some(([v]) => v === saved) ? saved : 'week';
+    if (VIEWS.some(([v]) => v === saved)) return saved;
+    // The hour-by-hour week grid is unreadable on a phone; start in Agenda there.
+    return typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches ? 'agenda' : 'week';
   });
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
   const [occurrences, setOccurrences] = useState([]);
