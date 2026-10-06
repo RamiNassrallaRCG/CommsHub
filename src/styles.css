@@ -2767,7 +2767,7 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
 .admin-row-expanded td { background: rgba(79, 70, 229, 0.04); }
 .admin-page-count { display: inline-block; padding: 3px 8px; border: 1px solid var(--panel-border); border-radius: 999px; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 .admin-table .admin-pages-row td { padding: 0 10px 14px; border-top: 0; background: rgba(79, 70, 229, 0.04); }
-.admin-pages-panel { padding: 14px; border: 1px solid var(--panel-border); border-radius: 10px; background: var(--panel, #fff); }
+.admin-pages-panel { padding: 14px; border: 1px solid var(--panel-border); border-radius: 10px; background: var(--surface); }
 .admin-pages-heading { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
 .admin-pages-heading strong { font-size: 13px; }
 .admin-pages-heading span, .admin-pages-note { color: var(--text-muted); font-size: 11px; }
@@ -2789,6 +2789,13 @@ footer { display: flex; justify-content: space-between; padding: 16px 13px; colo
 .admin-page-toggle.is-on .admin-switch::after { transform: translateX(14px); }
 .admin-page-toggle input:focus-visible + .admin-switch { outline: 2px solid #4f46e5; outline-offset: 2px; }
 .dark-theme .admin-page-toggle.is-on { background: rgba(79, 70, 229, 0.14); border-color: rgba(129, 120, 255, 0.45); }
+.dark-theme .admin-pages-panel { background: #162538; border-color: #2d3d57; }
+.dark-theme .admin-pages-heading strong, .dark-theme .admin-page-copy strong { color: #f3f7ff; }
+.dark-theme .admin-page-toggle { border-color: #2d3d57; background: #111b2d; }
+.dark-theme .admin-page-icon { background: rgba(142, 166, 255, 0.16); color: #b7c4ff; }
+.dark-theme .admin-switch { background: #3b4a62; }
+.dark-theme .admin-page-toggle.is-on .admin-switch { background: #6b63f0; }
+.dark-theme .admin-table .admin-pages-row td { background: rgba(79, 70, 229, 0.08); }
 @media (max-width: 850px) {
   .admin-add-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-list-header { align-items: stretch; flex-direction: column; }
