@@ -4219,6 +4219,10 @@ button.online-presence:hover, button.online-presence.open { border-color: #a5a1e
 .dark-theme .coming-soon-icon { background: #221f45; color: #b9b4ff; }
 .dark-theme .coming-soon-badge { background: #3a2d10; color: #f5c46b; }
 .history-table th { text-align: center; }
+/* Cells line up under their centered headers; the Title column stays left-aligned. */
+.history-table td { text-align: center; }
+.history-table th:nth-child(2), .history-table td:nth-child(2) { text-align: left; }
+.history-table .total-time-cell, .history-table .errors-none { justify-content: center; }
 
 /* ---- Dark theme: draft workspace ---- */
 .dark-theme .back-link { color: #bfd0ea; }
